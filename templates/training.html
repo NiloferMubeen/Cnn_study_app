@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Training CNNs — CNN Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="/static/neelu.js" defer></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --red:#EF4444;--red-lt:#fee2e2;--red-md:#fca5a5;--red-dk:#b91c1c;
+      --rose:#f43f5e;--rose-lt:#ffe4e6;
+      --orange:#f97316;--orange-lt:#ffedd5;--orange-md:#fdba74;
+      --green:#059669;--green-lt:#d1fae5;--green-md:#6ee7b7;
+      --blue:#0284c7;--blue-lt:#e0f2fe;--blue-md:#7dd3fc;
+      --violet:#7c3aed;--violet-lt:#ede9fb;--violet-md:#c4b5fd;
+      --amber:#d97706;--amber-lt:#fef3c7;--amber-md:#fcd34d;
+      --teal:#0d9488;--teal-lt:#ccfbf1;
+      --text:#1c0505;--text-2:#7f1d1d;--text-3:#9ca3af;
+      --bg:#ffffff;--bg2:#fee2e2;--white:#ffffff;
+      --border:#fecaca;--border2:#fca5a5;
+      --mono:'DM Mono',monospace;--display:'Fraunces',serif;--sans:'Plus Jakarta Sans',sans-serif;
+      --sh-sm:0 1px 3px rgba(239,68,68,.08);
+      --sh-md:0 4px 16px rgba(239,68,68,.12);
+      --sh-lg:0 12px 40px rgba(239,68,68,.16);
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:var(--sans);background:#fff;color:var(--text);overflow-x:hidden}
+    body::before{content:'';position:fixed;top:-180px;right:-180px;width:600px;height:600px;background:radial-gradient(circle,rgba(239,68,68,.07) 0%,transparent 70%);pointer-events:none;z-index:0}
+    body::after{content:'';position:fixed;bottom:-180px;left:-80px;width:500px;height:500px;background:radial-gradient(circle,rgba(244,63,94,.05) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+    /* NAV */
+    nav{position:sticky;top:56px;display:flex;align-items:center;justify-content:space-between;padding:11px 36px;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1.5px solid var(--border);z-index:100}
+    .nav-left{display:flex;align-items:center;gap:14px}
+    .back-btn{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--text-2);font-size:.8rem;font-family:var(--mono);padding:6px 14px;border:1.5px solid var(--border2);border-radius:8px;background:#fff;transition:all .2s;box-shadow:var(--sh-sm)}
+    .back-btn:hover{border-color:var(--red);color:var(--red-dk)}
+    .nav-badge{font-family:var(--mono);font-size:.68rem;padding:4px 10px;background:var(--red-lt);color:var(--red-dk);border:1.5px solid var(--red-md);border-radius:20px;font-weight:500;letter-spacing:.06em}
+    .progress-dots{display:flex;gap:6px;align-items:center}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--border2);cursor:pointer;transition:all .2s}
+    .dot.active{background:var(--red);border-color:var(--red);box-shadow:0 0 0 3px var(--red-lt)}
+    .dot.done{background:var(--red-lt);border-color:var(--red)}
+
+    /* LAYOUT */
+    .page-layout{display:grid;grid-template-columns:1fr 280px;align-items:start;padding:0 32px 0 0}
+    .main-col{min-width:0}
+    .sidebar-col{position:sticky;top:120px;padding:32px 0 32px 28px;display:flex;flex-direction:column;gap:16px;z-index:10}
+    @media(max-width:900px){.page-layout{grid-template-columns:1fr;padding-right:0}.sidebar-col{display:none}}
+
+    /* HERO */
+    .hero{padding:48px 56px 36px;position:relative;z-index:1}
+    .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;color:var(--red-dk);background:var(--red-lt);border:1.5px solid var(--red-md);padding:5px 12px;border-radius:20px;margin-bottom:16px;letter-spacing:.06em}
+    .hero h1{font-family:var(--display);font-size:clamp(2.2rem,5vw,3.6rem);font-weight:900;letter-spacing:-.03em;line-height:1.05;margin-bottom:12px}
+    .hero h1 span{color:var(--red);font-style:italic}
+    .hero-sub{font-size:1rem;color:var(--text-2);max-width:560px;line-height:1.75;margin-bottom:22px}
+    .hero-accent{width:56px;height:5px;background:linear-gradient(90deg,var(--red),var(--rose));border-radius:3px;margin-bottom:16px}
+    .hero-chips{display:flex;gap:10px;flex-wrap:wrap}
+    .hero-chip{background:var(--red-lt);border:1.5px solid var(--red-md);border-radius:20px;padding:6px 14px;font-family:var(--mono);font-size:.68rem;color:var(--red-dk);font-weight:500}
+
+    /* SECTIONS */
+    .section{position:relative;margin:0 0 52px;padding:0 56px;z-index:1}
+    .section-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+    .section-num{font-family:var(--mono);font-size:.65rem;font-weight:500;color:#fff;background:var(--red);padding:4px 9px;border-radius:6px;letter-spacing:.08em;flex-shrink:0}
+    .section h2{font-family:var(--display);font-size:1.45rem;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+
+    /* CARD */
+    .card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:24px 28px;margin-bottom:14px;box-shadow:var(--sh-sm)}
+    .card p{color:var(--text-2);line-height:1.78;font-size:.93rem}
+    .card p+p{margin-top:10px}
+    .hl     {font-weight:700;color:var(--red-dk); background:var(--red-lt);  padding:1px 6px;border-radius:4px}
+    .hl-blue{font-weight:700;color:var(--blue);   background:var(--blue-lt); padding:1px 6px;border-radius:4px}
+    .hl-grn {font-weight:700;color:var(--green);  background:var(--green-lt);padding:1px 6px;border-radius:4px}
+    .hl-vio {font-weight:700;color:var(--violet); background:var(--violet-lt);padding:1px 6px;border-radius:4px}
+    .analogy{background:linear-gradient(135deg,#fff1f2,var(--rose-lt));border:1.5px solid var(--red-md);border-left:4px solid var(--red);border-radius:12px;padding:16px 20px;margin-top:14px}
+    .analogy-label{font-family:var(--mono);font-size:.65rem;color:var(--red);font-weight:500;letter-spacing:.1em;margin-bottom:7px}
+    .analogy p{font-size:.88rem;color:#7f1d1d}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:640px){.two-col{grid-template-columns:1fr}}
+    .mini-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:18px}
+    .mini-card-title{font-family:var(--mono);font-size:.7rem;font-weight:500;color:var(--red-dk);margin-bottom:7px;letter-spacing:.05em}
+    .mini-card p{font-size:.86rem;color:var(--text-2);line-height:1.65}
+
+    /* ── SHARED DEMO CHROME ── */
+    .demo-wrap{background:#fff;border:2px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:var(--sh-lg);margin-bottom:0}
+    .demo-top{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;background:var(--text);flex-wrap:wrap;gap:10px}
+    .demo-title-txt{font-family:var(--mono);font-size:.73rem;color:#fca5a5;letter-spacing:.1em}
+    .demo-body-pad{padding:24px 28px;background:#fff;display:flex;flex-direction:column;gap:18px}
+    .demo-footer-bar{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;border-top:1.5px solid var(--border);background:var(--red-lt);flex-wrap:wrap;gap:10px}
+    .hint-txt{font-family:var(--mono);font-size:.7rem;color:var(--text-2)}
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{font-family:var(--mono);font-size:.75rem;font-weight:500;padding:8px 18px;border-radius:10px;border:none;cursor:pointer;transition:all .2s}
+    .btn-primary{background:var(--red);color:#fff;box-shadow:0 3px 12px rgba(239,68,68,.35)}
+    .btn-primary:hover{background:var(--red-dk);transform:translateY(-1px)}
+    .btn-primary:disabled{background:#e5e7eb;color:#9ca3af;box-shadow:none;cursor:not-allowed;transform:none}
+    .btn-ghost{background:#fff;color:var(--text-2);border:1.5px solid var(--border2)}
+    .btn-ghost:hover{border-color:var(--red);color:var(--red-dk)}
+    select{font-family:var(--mono);font-size:.72rem;background:#1c0505;border:1px solid #44403c;color:#fca5a5;border-radius:6px;padding:5px 10px;cursor:pointer;outline:none}
+    select:hover{border-color:var(--red-md)}
+    .ctrl-group{display:flex;align-items:center;gap:7px}
+    .ctrl-lbl{font-family:var(--mono);font-size:.63rem;color:#6b7280;text-transform:uppercase;letter-spacing:.07em}
+    input[type=range]{accent-color:var(--red);height:5px;border-radius:3px;outline:none;cursor:pointer}
+
+    /* canvas cards */
+    .canvas-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--sh-sm)}
+    .canvas-card-title{font-family:var(--mono);font-size:.63rem;text-transform:uppercase;letter-spacing:.09em;color:var(--text-3);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+    canvas{width:100%;display:block;border-radius:6px}
+
+    /* stat chips */
+    .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    @media(max-width:600px){.stat-row{grid-template-columns:1fr 1fr}}
+    .stat-chip{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:12px;text-align:center;box-shadow:var(--sh-sm)}
+    .stat-lbl{font-family:var(--mono);font-size:.6rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+    .stat-val{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--red-dk)}
+
+    /* slider row */
+    .sl-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 20px}
+    @media(max-width:550px){.sl-grid{grid-template-columns:1fr}}
+    .sl-row{display:flex;flex-direction:column;gap:5px}
+    .sl-hdr{display:flex;justify-content:space-between}
+    .sl-label{font-family:var(--mono);font-size:.68rem;color:var(--text-2)}
+    .sl-val{font-family:var(--mono);font-size:.68rem;color:var(--red);font-weight:700}
+    .sl-full{display:flex;flex-direction:column;gap:5px}
+
+    /* progress bar */
+    .prog-track{height:5px;background:var(--red-lt);border-radius:3px;overflow:hidden;margin-top:5px}
+    .prog-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--rose));border-radius:3px;transition:width .3s}
+
+    /* backprop network */
+    .bp-network{background:#0f0f1a;border-radius:14px;padding:20px;position:relative}
+
+    /* optimizer race table */
+    .race-grid{display:flex;flex-direction:column;gap:8px}
+    .race-row{display:flex;align-items:center;gap:10px}
+    .race-name{font-family:var(--mono);font-size:.7rem;color:var(--text-2);width:90px;flex-shrink:0}
+    .race-track{flex:1;height:22px;background:var(--red-lt);border-radius:6px;overflow:hidden;position:relative;border:1px solid var(--border)}
+    .race-bar{height:100%;border-radius:6px;transition:width .35s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-family:var(--mono);font-size:.6rem;font-weight:700;color:#fff;min-width:2px}
+    .race-loss{font-family:var(--mono);font-size:.68rem;color:var(--text-2);width:52px;text-align:right;flex-shrink:0}
+
+    /* loss annotation */
+    .annotation-box{background:var(--red-lt);border:1.5px solid var(--red-md);border-radius:10px;padding:12px 16px;font-size:.82rem;color:var(--red-dk);line-height:1.65;display:none}
+    .annotation-box.visible{display:block}
+    .annotation-title{font-weight:700;margin-bottom:4px;font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em}
+
+    /* epoch step indicator */
+    .epoch-bar{display:flex;align-items:center;gap:10px}
+    .epoch-num{font-family:var(--mono);font-size:.82rem;color:var(--text-2);font-weight:500}
+    .epoch-prog{flex:1;height:6px;background:var(--red-lt);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+    .epoch-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--rose));border-radius:3px;transition:width .15s}
+
+    /* dropout visual */
+    .dropout-row{display:flex;gap:6px;flex-wrap:wrap}
+    .neuron-box{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.62rem;font-weight:700;border:1.5px solid transparent;transition:all .3s}
+    .neuron-box.on{background:var(--red-lt);border-color:var(--red-md);color:var(--red-dk)}
+    .neuron-box.off{background:#f1f5f9;border-color:#e2e8f0;color:#94a3b8;text-decoration:line-through}
+
+    /* loss scenarios colour coding */
+    .scenario-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .scenario-chip{font-family:var(--mono);font-size:.65rem;padding:4px 11px;border-radius:20px;cursor:pointer;border:1.5px solid transparent;transition:all .18s;font-weight:500}
+    .scenario-chip.active{box-shadow:0 0 0 2px rgba(0,0,0,.1)}
+
+    /* REVEAL */
+    .reveal{opacity:0;transform:translateY(22px);transition:opacity .5s ease,transform .5s ease}
+    .reveal.visible{opacity:1;transform:none}
+
+    /* formula bar */
+    .formula-bar{font-family:var(--mono);background:var(--text);color:#fca5a5;border-radius:10px;padding:14px 20px;font-size:.85rem;text-align:center;margin-top:12px;box-shadow:var(--sh-md)}
+
+    /* SIDEBAR */
+    .sb-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:16px 18px;box-shadow:var(--sh-sm)}
+    .sb-label{font-family:var(--mono);font-size:.6rem;font-weight:500;color:var(--red-dk);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+    .mod-list{display:flex;flex-direction:column;gap:7px}
+    .mod-item{display:flex;align-items:center;gap:9px}
+    .mod-check{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.58rem;border:1.5px solid var(--border2);background:var(--bg2)}
+    .mod-check.done{background:var(--green);border-color:var(--green);color:#fff}
+    .mod-check.active{background:var(--red);border-color:var(--red-dk);color:#fff}
+    .mod-check.locked{background:var(--bg2);border-color:var(--border)}
+    .mod-name{font-size:.8rem;color:#9ca3af;line-height:1.3}
+    .mod-name.done{color:#374151;font-weight:500}
+    .mod-name.active{color:var(--red-dk);font-weight:700}
+    .sb-progress-row{margin-top:12px}
+    .sb-progress-label{font-size:.68rem;color:#9ca3af;margin-bottom:5px;font-family:var(--mono)}
+    .sb-progress-track{height:5px;background:var(--bg2);border-radius:3px;overflow:hidden}
+    .sb-progress-fill{height:100%;background:linear-gradient(90deg,var(--green),#34d399);border-radius:3px;transition:width .4s}
+    .term-list{display:flex;flex-direction:column;gap:7px}
+    .term-item{background:var(--red-lt);border-radius:8px;padding:8px 11px;border:1px solid var(--border)}
+    .term-name{font-size:.73rem;font-weight:700;color:var(--text);margin-bottom:2px}
+    .term-desc{font-size:.68rem;color:var(--text-2);line-height:1.5}
+    .sb-nav{display:flex;gap:7px}
+    .sb-nav a{flex:1;display:flex;align-items:center;justify-content:center;text-decoration:none;padding:9px;border-radius:9px;font-family:var(--mono);font-size:.7rem;font-weight:500;transition:all .2s}
+    .sb-nav-prev{background:#fff;color:var(--text-2);border:1.5px solid var(--border2)}
+    .sb-nav-prev:hover{border-color:var(--red);color:var(--red-dk)}
+    .sb-nav-next{background:var(--red);color:#fff;box-shadow:0 3px 12px rgba(239,68,68,.4)}
+    .sb-nav-next:hover{background:var(--red-dk)}
+
+    /* PAGE FOOTER */
+    .page-footer{margin:0 0 64px;padding:0 56px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;z-index:1;position:relative}
+    .coverage-box{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;box-shadow:var(--sh-sm)}
+    .coverage-label{font-family:var(--mono);font-size:.63rem;color:var(--red-dk);font-weight:500;letter-spacing:.08em;margin-bottom:7px}
+    .coverage-tags{display:flex;gap:5px;flex-wrap:wrap}
+    .ctag{font-family:var(--mono);font-size:.63rem;background:var(--red-lt);color:var(--red-dk);border:1px solid var(--red-md);padding:3px 8px;border-radius:20px}
+    .footer-next{display:flex;align-items:center;gap:12px;text-decoration:none;background:var(--red);color:#fff;padding:14px 22px;border-radius:12px;box-shadow:0 5px 18px rgba(239,68,68,.4);transition:all .2s}
+    .footer-next:hover{background:var(--red-dk);transform:translateX(3px)}
+    .fn-label-sm{font-family:var(--mono);font-size:.63rem;opacity:.8;letter-spacing:.06em}
+    .fn-title-big{font-family:var(--display);font-size:1.05rem;font-weight:700}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" class="back-btn">← Home</a>
+    <span class="nav-badge">Advanced · 04</span>
+  </div>
+  <div class="progress-dots">
+    <div class="dot active" data-sec="sec-1"></div>
+    <div class="dot" data-sec="sec-2"></div>
+    <div class="dot" data-sec="sec-3"></div>
+  </div>
+</nav>
+
+<div class="page-layout">
+<div class="main-col">
+
+<!-- HERO -->
+<div class="hero reveal">
+  <div class="hero-eyebrow">🎯 Topic 4 of 7 — Advanced</div>
+  <div class="hero-accent"></div>
+  <h1>Training <span>CNNs</span></h1>
+  <p class="hero-sub">Four live interactive demos — roll a ball down a loss curve, watch gradients flow backwards, race optimisers head-to-head, and diagnose training problems from their loss curves.</p>
+  <div class="hero-chips">
+    <span class="hero-chip">🎳 Gradient Descent Ball</span>
+    <span class="hero-chip">↩ Backprop Animator</span>
+    <span class="hero-chip">🏎 Optimiser Race</span>
+    <span class="hero-chip">📉 Loss Curve Diagnostics</span>
+  </div>
+</div>
+
+<!-- ═══ SEC 1 — DEMO 1: GRADIENT DESCENT BALL ═══ -->
+<div class="section reveal" id="sec-1">
+  <div class="section-header"><span class="section-num">01</span><h2>🎳 Gradient Descent — Roll the Ball</h2></div>
+
+  <div class="card">
+    <p>The network's goal is to find the <span class="hl">lowest point on the loss surface</span>. At every step, it computes the gradient (slope) of the loss and moves the weights downhill by <code style="font-family:var(--mono);font-size:.88em;background:var(--red-lt);color:var(--red-dk);padding:1px 5px;border-radius:4px">η · gradient</code>. This is gradient descent.</p>
+    <p>The <span class="hl-blue">learning rate η</span> controls step size. Drag the slider below to see what happens: too small and convergence is painfully slow; too large and the ball overshoots and bounces around or diverges entirely.</p>
+  </div>
+
+  <div class="demo-wrap">
+    <div class="demo-top">
+      <span class="demo-title-txt">🎳 GRADIENT DESCENT VISUALISER</span>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div class="ctrl-group">
+          <span class="ctrl-lbl">Loss Surface</span>
+          <select id="surface-select">
+            <option value="bowl">Smooth Bowl</option>
+            <option value="bumpy">Bumpy (local minima)</option>
+            <option value="saddle">Plateau</option>
+            <option value="steep">Steep Valley</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-body-pad">
+      <!-- Canvas -->
+      <div class="canvas-card">
+        <div class="canvas-card-title">
+          <span>Loss surface &amp; gradient descent path</span>
+          <span id="gd-status" style="color:var(--red);font-weight:600;font-size:.68rem;">Ready</span>
+        </div>
+        <canvas id="gd-canvas" height="260"></canvas>
+      </div>
+
+      <!-- LR slider -->
+      <div class="card" style="margin-bottom:0">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="sl-row">
+            <div class="sl-hdr">
+              <span class="sl-label">Learning Rate η</span>
+              <span class="sl-val" id="v-lr">0.050</span>
+            </div>
+            <input type="range" id="s-lr" min="0.001" max="0.45" step="0.001" value="0.05" style="width:100%" oninput="onLR()">
+            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.58rem;color:var(--text-3);margin-top:2px">
+              <span>Too slow</span><span>Sweet spot</span><span>Diverges!</span>
+            </div>
+            <!-- Live verdict -->
+            <div id="gd-lr-verdict" style="font-family:var(--mono);font-size:.72rem;margin-top:7px;font-weight:600;color:#059669;">✅ Good range</div>
+          </div>
+          <div class="sl-row">
+            <div class="sl-hdr">
+              <span class="sl-label">Start position</span>
+              <span class="sl-val" id="v-start">−3.5</span>
+            </div>
+            <input type="range" id="s-start" min="-4.5" max="4.5" step="0.1" value="-3.5" style="width:100%" oninput="onStart()">
+            <div style="font-family:var(--mono);font-size:.58rem;color:var(--text-3);margin-top:4px">Drag to change where the ball starts on the surface</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stat chips -->
+      <div class="stat-row">
+        <div class="stat-chip"><div class="stat-lbl">Step</div><div class="stat-val" id="gd-step">0</div></div>
+        <div class="stat-chip"><div class="stat-lbl">Position (w)</div><div class="stat-val" id="gd-pos">—</div></div>
+        <div class="stat-chip"><div class="stat-lbl">Loss</div><div class="stat-val" id="gd-loss">—</div></div>
+        <div class="stat-chip"><div class="stat-lbl">Gradient</div><div class="stat-val" id="gd-grad">—</div></div>
+      </div>
+
+      <!-- Live explanation -->
+      <div class="annotation-box visible" id="gd-annotation">
+        <div class="annotation-title">ℹ What is happening?</div>
+        <div id="gd-annotation-body">Press <strong>Run</strong> to drop the ball onto the loss surface and watch gradient descent find the minimum. The ball moves opposite to the gradient (the slope). Larger η = bigger steps.</div>
+      </div>
+    </div>
+
+    <div class="demo-footer-bar">
+      <div class="hint-txt" id="gd-hint">Adjust learning rate, then click Run</div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="resetGD()">↺ Reset</button>
+        <button class="btn btn-ghost" onclick="gdStep()">Step →</button>
+        <button class="btn btn-primary" id="gd-run-btn" onclick="toggleRunGD()">▶ Run</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SEC 2 — DEMO 2: BACKPROP ANIMATOR ═══ -->
+<div class="section reveal" id="sec-2">
+  <div class="section-header"><span class="section-num">02</span><h2>↩ Backpropagation Animator</h2></div>
+
+  <div class="card">
+    <p>After the <span class="hl-grn">forward pass</span> produces a prediction and a loss, <span class="hl">backpropagation</span> uses the chain rule to compute ∂L/∂w for every weight — propagating the error signal backwards through every layer. Use <strong>← Prev</strong> and <strong>Next →</strong> to walk through every step at your own pace.</p>
+  </div>
+
+  <div class="demo-wrap">
+    <div class="demo-top">
+      <span class="demo-title-txt">↩ BACKPROP STEP-BY-STEP</span>
+      <!-- Step counter badge -->
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-family:var(--mono);font-size:.7rem;color:#fca5a5;">
+          Step <span id="bp-step-counter">0</span> / <span id="bp-step-total">12</span>
+        </div>
+        <div style="width:120px;height:5px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;">
+          <div id="bp-top-bar" style="height:100%;background:linear-gradient(90deg,#EF4444,#f97316);border-radius:3px;width:0%;transition:width .3s"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-body-pad" style="padding:20px 24px">
+
+      <!-- Network canvas -->
+      <canvas id="bp-canvas" height="280" style="border-radius:10px;background:#0f0f1a"></canvas>
+
+      <!-- Step explanation card — main content -->
+      <div style="background:var(--red-lt);border:2px solid var(--red-md);border-radius:14px;padding:18px 22px;min-height:100px;position:relative;">
+        <!-- Phase tag -->
+        <div id="bp-phase-tag" style="position:absolute;top:-12px;left:20px;font-family:var(--mono);font-size:.62rem;font-weight:700;padding:3px 10px;border-radius:20px;background:#EF4444;color:#fff;">FORWARD PASS</div>
+        <div style="font-family:var(--mono);font-size:.68rem;color:var(--red-dk);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+          <span id="bp-step-label">Step 0 — Ready</span>
+        </div>
+        <div style="font-size:.88rem;color:var(--text-2);line-height:1.7;" id="bp-step-body">
+          Click <strong>Next →</strong> to begin. You will walk through 6 forward pass steps, then 6 backward pass steps — one at a time.
+        </div>
+        <!-- Formula chip -->
+        <div id="bp-formula" style="display:none;margin-top:12px;font-family:var(--mono);font-size:.78rem;background:var(--text);color:#fca5a5;padding:8px 14px;border-radius:8px;display:none;"></div>
+      </div>
+
+      <!-- Step progress dots -->
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.62rem;color:var(--text-3);">
+          <span>→ Forward Pass (6 steps)</span>
+          <span>← Backward Pass (6 steps)</span>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center;" id="bp-dots"></div>
+      </div>
+
+    </div><!-- /demo-body-pad -->
+
+    <div class="demo-footer-bar">
+      <div class="hint-txt" id="bp-hint">Step 0 of 12 — press Next to start</div>
+      <div class="btn-row">
+        <button class="btn btn-ghost"   onclick="resetBP()">↺ Reset</button>
+        <button class="btn btn-ghost"   id="bp-prev-btn" onclick="bpGo(-1)" disabled>← Prev</button>
+        <button class="btn btn-primary" id="bp-next-btn" onclick="bpGo(1)">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SEC 3 — BATCHNORM & DROPOUT INTERACTIVE ═══ -->
+<div class="section reveal" id="sec-3">
+  <div class="section-header"><span class="section-num">05</span><h2>BatchNorm &amp; Dropout — Live</h2></div>
+
+  <div class="two-col">
+    <!-- BatchNorm -->
+    <div class="demo-wrap">
+      <div class="demo-top" style="padding:10px 16px">
+        <span class="demo-title-txt" style="font-size:.68rem">📊 BATCH NORMALISATION</span>
+      </div>
+      <div style="padding:16px">
+        <p style="font-size:.82rem;color:var(--text-2);line-height:1.65;margin-bottom:14px">BatchNorm normalises activations to mean≈0, std≈1 per mini-batch — keeping them in the most sensitive region of the activation function.</p>
+        <div style="background:#0f0f1a;border-radius:10px;padding:14px;margin-bottom:12px">
+          <canvas id="bn-canvas" height="140"></canvas>
+        </div>
+        <div class="sl-row">
+          <div class="sl-hdr"><span class="sl-label">Input distribution mean</span><span class="sl-val" id="v-bn-mean">5.0</span></div>
+          <input type="range" id="s-bn-mean" min="-10" max="10" step="0.5" value="5" style="width:100%" oninput="updateBN()">
+        </div>
+        <div class="sl-row" style="margin-top:10px">
+          <div class="sl-hdr"><span class="sl-label">Input distribution std</span><span class="sl-val" id="v-bn-std">3.0</span></div>
+          <input type="range" id="s-bn-std" min="0.5" max="8" step="0.5" value="3" style="width:100%" oninput="updateBN()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Dropout -->
+    <div class="demo-wrap">
+      <div class="demo-top" style="padding:10px 16px">
+        <span class="demo-title-txt" style="font-size:.68rem">💧 DROPOUT VISUALISER</span>
+      </div>
+      <div style="padding:16px">
+        <p style="font-size:.82rem;color:var(--text-2);line-height:1.65;margin-bottom:14px">Each forward pass randomly zeros neurons with probability p. Click <strong>New Epoch</strong> to see a different random mask — no two training steps are the same.</p>
+        <div class="dropout-row" id="dropout-viz" style="margin-bottom:14px"></div>
+        <div style="font-family:var(--mono);font-size:.7rem;color:var(--text-3);margin-bottom:12px" id="dropout-stats">p=0.3 · 0 of 16 dropped</div>
+        <div class="sl-row">
+          <div class="sl-hdr"><span class="sl-label">Dropout rate p</span><span class="sl-val" id="v-drop">0.30</span></div>
+          <input type="range" id="s-drop" min="0" max="0.8" step="0.05" value="0.3" style="width:100%" oninput="updateDropout()">
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:8px" onclick="updateDropout()">🎲 New Epoch</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="formula-bar" style="margin-top:14px">
+    w ← w − η · ∂L/∂w &nbsp;&nbsp;|&nbsp;&nbsp; BN: x̂ = (x − μ) / σ &nbsp;&nbsp;|&nbsp;&nbsp; Dropout: x̃ = x · Bernoulli(1−p) / (1−p)
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="page-footer reveal">
+  <div class="coverage-box">
+    <div class="coverage-label">TOPICS COVERED</div>
+    <div class="coverage-tags">
+      <span class="ctag">Gradient Descent</span><span class="ctag">Backprop</span>
+      <span class="ctag">Learning Rate</span><span class="ctag">Adam</span>
+      <span class="ctag">BatchNorm</span><span class="ctag">Dropout</span>
+      <span class="ctag">Loss Diagnostics</span>
+    </div>
+  </div>
+  <a href="/architectures" class="footer-next">
+    <div style="font-size:1.4rem">🏛</div>
+    <div><div class="fn-label-sm">NEXT UP</div><div class="fn-title-big">Architectures →</div></div>
+  </a>
+</div>
+
+</div><!-- /main-col -->
+
+<!-- SIDEBAR -->
+<div class="sidebar-col">
+  <div class="sb-card">
+    <div class="sb-label">Module Progress</div>
+    <div class="mod-list">
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Convolution</span></div>
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Pooling</span></div>
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Activation Functions</span></div>
+      <div class="mod-item"><div class="mod-check active">🎯</div><span class="mod-name active">Training CNNs</span></div>
+      <div class="mod-item"><div class="mod-check locked"></div><span class="mod-name">Architectures</span></div>
+      <div class="mod-item"><div class="mod-check locked"></div><span class="mod-name">Code Lab</span></div>
+      <div class="mod-item"><div class="mod-check locked"></div><span class="mod-name">Data Augmentation</span></div>
+    </div>
+    <div class="sb-progress-row">
+      <div class="sb-progress-label">4 of 7 modules</div>
+      <div class="sb-progress-track"><div class="sb-progress-fill" id="sb-fill" style="width:57%"></div></div>
+    </div>
+  </div>
+  <div class="sb-card">
+    <div class="sb-label">Key Terms</div>
+    <div class="term-list">
+      <div class="term-item"><div class="term-name">Gradient Descent</div><div class="term-desc">Move weights downhill: w ← w − η·∂L/∂w</div></div>
+      <div class="term-item"><div class="term-name">Learning Rate</div><div class="term-desc">Step size η — too high diverges, too low crawls</div></div>
+      <div class="term-item"><div class="term-name">Backpropagation</div><div class="term-desc">Chain rule to compute ∂L/∂w for every weight</div></div>
+      <div class="term-item"><div class="term-name">Adam</div><div class="term-desc">Adaptive per-weight learning rates — go-to default</div></div>
+      <div class="term-item"><div class="term-name">BatchNorm</div><div class="term-desc">Normalise activations to μ≈0, σ≈1 per batch</div></div>
+      <div class="term-item"><div class="term-name">Overfitting</div><div class="term-desc">Train loss ↓ but val loss ↑ — model memorising</div></div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <a href="/activation"    class="sb-nav-prev">← Activation</a>
+    <a href="/architectures" class="sb-nav-next">Arch →</a>
+  </div>
+</div>
+
+</div><!-- /page-layout -->
+
+<script>
+/* ══════════════════════════════════════════════════
+   DEMO 1 — GRADIENT DESCENT BALL
+═══════════════════════════════════════════════════ */
+const SURFACES = {
+  bowl:   x => 0.5 * x * x,
+  bumpy:  x => 0.3 * x * x + Math.sin(2.5 * x) * 0.6 + 0.3,
+  saddle: x => 0.06 * x * x + 1.1 * Math.exp(-0.4 * x * x),
+  steep:  x => Math.abs(x) * 0.8,
+};
+const SURFACE_GRADS = {
+  bowl:   x => x,
+  bumpy:  x => 0.6 * x + 2.5 * Math.cos(2.5 * x) * 0.6,
+  saddle: x => 0.12 * x - 1.1 * 0.8 * x * Math.exp(-0.4 * x * x),
+  steep:  x => x > 0 ? 0.8 : -0.8,
+};
+
+let gdPos, gdHistory = [], gdRunning = false, gdTimer = null, gdSurface = 'bowl';
+
+function gdLoss(x) { return SURFACES[gdSurface](x); }
+function gdGrad(x) { return SURFACE_GRADS[gdSurface](x); }
+
+function getLR() { return parseFloat(document.getElementById('s-lr').value); }
+
+function resetGD() {
+  if (gdTimer) clearInterval(gdTimer);
+  gdRunning = false;
+  document.getElementById('gd-run-btn').textContent = '▶ Run';
+  gdPos = parseFloat(document.getElementById('s-start').value);
+  gdHistory = [gdPos];
+  updateLRVerdict();
+  drawGD();
+  document.getElementById('gd-step').textContent = '0';
+  document.getElementById('gd-pos').textContent   = gdPos.toFixed(3);
+  document.getElementById('gd-loss').textContent  = gdLoss(gdPos).toFixed(3);
+  document.getElementById('gd-grad').textContent  = gdGrad(gdPos).toFixed(3);
+  document.getElementById('gd-hint').textContent  = 'Adjust LR then click Run or Step';
+  setGDAnnotation();
+}
+
+function updateLRVerdict() {
+  const lr = getLR();
+  const lbl = document.getElementById('gd-lr-verdict');
+  if (!lbl) return;
+  if (lr > 0.28)      { lbl.textContent = '⚠️ Too large — will overshoot!'; lbl.style.color = '#dc2626'; }
+  else if (lr < 0.02) { lbl.textContent = '🐢 Very small — slow convergence'; lbl.style.color = '#0284c7'; }
+  else                { lbl.textContent = '✅ Good range'; lbl.style.color = '#059669'; }
+}
+
+function gdStep() {
+  const lr  = getLR();
+  const g   = gdGrad(gdPos);
+  gdPos     = gdPos - lr * g;
+  gdPos     = Math.max(-5.5, Math.min(5.5, gdPos));
+  gdHistory.push(gdPos);
+  drawGD();
+  const steps = gdHistory.length - 1;
+  document.getElementById('gd-step').textContent  = steps;
+  document.getElementById('gd-pos').textContent   = gdPos.toFixed(3);
+  document.getElementById('gd-loss').textContent  = gdLoss(gdPos).toFixed(3);
+  document.getElementById('gd-grad').textContent  = g.toFixed(3);
+  setGDAnnotation(lr, g, steps);
+  // auto-stop if converged or diverged
+  if (gdRunning) {
+    if (Math.abs(g) < 0.005) { stopRunGD(); document.getElementById('gd-hint').textContent = '✅ Converged to minimum!'; }
+    if (Math.abs(gdPos) > 5)  { stopRunGD(); document.getElementById('gd-hint').textContent = '💥 Diverged — learning rate too large!'; }
+  }
+}
+
+function setGDAnnotation(lr, g, steps) {
+  const body = document.getElementById('gd-annotation-body');
+  if (!body) return;
+  if (lr === undefined) {
+    body.innerHTML = 'Press <strong>Run</strong> to roll the ball. The ball moves opposite to the gradient (slope). Change the Learning Rate slider to see different behaviours.';
+    return;
+  }
+  const update = (-lr * g).toFixed(3);
+  if (lr > 0.28 && steps > 1) {
+    const os = gdHistory.length > 2 && (gdHistory[gdHistory.length-1] - gdHistory[gdHistory.length-2]) * (gdHistory[gdHistory.length-2] - gdHistory[gdHistory.length-3]) < 0;
+    body.innerHTML = `🔴 <strong>LR = ${lr.toFixed(3)} is too large.</strong> ${os ? '<em>Overshoot detected!</em> The ball jumped past the minimum and is oscillating back and forth.' : 'The ball takes huge steps — it is likely to overshoot the minimum.'}  Weight update: w ← ${(gdPos+lr*g).toFixed(2)} − ${lr}×${g.toFixed(2)} = <strong>${gdPos.toFixed(2)}</strong>.`;
+  } else if (lr < 0.02) {
+    body.innerHTML = `🐢 <strong>LR = ${lr.toFixed(3)} is very small.</strong> Each step moves only ${Math.abs(update)} units — convergence will take many iterations. The path is smooth but slow. In practice this wastes compute budget.`;
+  } else if (Math.abs(g) < 0.01) {
+    body.innerHTML = `✅ <strong>Converged!</strong> Gradient ≈ 0 — slope is flat, we are at (or near) the minimum. Loss = <strong>${gdLoss(gdPos).toFixed(4)}</strong>. This is what successful training looks like.`;
+  } else {
+    body.innerHTML = `Step ${steps}: gradient = ${g.toFixed(3)}, update = −${lr} × ${g.toFixed(3)} = <strong>${update}</strong>. New position: <strong>${gdPos.toFixed(3)}</strong>. Loss: <strong>${gdLoss(gdPos).toFixed(3)}</strong>.`;
+  }
+}
+
+function toggleRunGD() {
+  if (gdRunning) stopRunGD(); else startRunGD();
+}
+function startRunGD() {
+  gdRunning = true;
+  document.getElementById('gd-run-btn').textContent = '⏸ Pause';
+  const speed = getLR() > 0.25 ? 220 : getLR() < 0.02 ? 80 : 140;
+  gdTimer = setInterval(gdStep, speed);
+}
+function stopRunGD() {
+  gdRunning = false;
+  document.getElementById('gd-run-btn').textContent = '▶ Run';
+  if (gdTimer) clearInterval(gdTimer);
+}
+function onLR() {
+  const lr = getLR();
+  document.getElementById('v-lr').textContent = lr.toFixed(3);
+  updateLRVerdict();
+  if (gdRunning) { stopRunGD(); gdHistory = [parseFloat(document.getElementById('s-start').value)]; gdPos = gdHistory[0]; startRunGD(); }
+  else resetGD();
+}
+function onStart() {
+  document.getElementById('v-start').textContent = parseFloat(document.getElementById('s-start').value).toFixed(1);
+  resetGD();
+}
+
+function drawGD() {
+  const canvas = document.getElementById('gd-canvas');
+  const W = canvas.clientWidth || 700, H = 260;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const xMin = -5, xMax = 5;
+  // dynamic y range based on surface
+  let yMax = 0;
+  for (let x = xMin; x <= xMax; x += 0.05) yMax = Math.max(yMax, gdLoss(x));
+  yMax = Math.min(yMax * 1.18, 14);
+  const yMin = -0.15;
+
+  const pad = { l: 48, r: 20, t: 18, b: 36 };
+  const cW  = W - pad.l - pad.r;
+  const cH  = H - pad.t - pad.b;
+
+  const tx = x => pad.l + ((x - xMin) / (xMax - xMin)) * cW;
+  const ty = y => pad.t + cH - ((Math.min(y, yMax) - yMin) / (yMax - yMin)) * cH;
+
+  // background
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#fff5f5'); bg.addColorStop(1, '#ffffff');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // grid
+  ctx.strokeStyle = '#fecaca55'; ctx.lineWidth = 1;
+  [-4,-3,-2,-1,0,1,2,3,4].forEach(gx => {
+    ctx.beginPath(); ctx.moveTo(tx(gx), pad.t); ctx.lineTo(tx(gx), H - pad.b); ctx.stroke();
+  });
+  const yStep = yMax > 4 ? 2 : 1;
+  for (let gy = 0; gy <= yMax; gy += yStep) {
+    ctx.beginPath(); ctx.moveTo(pad.l, ty(gy)); ctx.lineTo(W - pad.r, ty(gy)); ctx.stroke();
+    ctx.fillStyle = '#9ca3af'; ctx.font = '10px DM Mono,monospace';
+    ctx.fillText(gy.toFixed(gy < 1 ? 1 : 0), 2, ty(gy) + 4);
+  }
+
+  // axis labels
+  ctx.fillStyle = '#9ca3af'; ctx.font = '10px DM Mono,monospace';
+  ctx.fillText('weight w →', W - pad.r - 72, H - 4);
+  ctx.fillText('Loss', pad.l - 42, pad.t + 10);
+
+  // zero axis
+  ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l, ty(0)); ctx.lineTo(W - pad.r, ty(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tx(0), pad.t); ctx.lineTo(tx(0), H - pad.b); ctx.stroke();
+
+  // loss curve fill
+  ctx.beginPath();
+  for (let px = 0; px <= cW; px++) {
+    const xv = xMin + (px / cW) * (xMax - xMin);
+    const yv = gdLoss(xv);
+    px === 0 ? ctx.moveTo(tx(xv), ty(yv)) : ctx.lineTo(tx(xv), ty(yv));
+  }
+  ctx.lineTo(W - pad.r, ty(yMin)); ctx.lineTo(pad.l, ty(yMin)); ctx.closePath();
+  ctx.fillStyle = 'rgba(239,68,68,0.07)'; ctx.fill();
+
+  // loss curve line
+  ctx.beginPath(); ctx.strokeStyle = '#EF4444'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  for (let px = 0; px <= cW; px++) {
+    const xv = xMin + (px / cW) * (xMax - xMin);
+    const yv = gdLoss(xv);
+    px === 0 ? ctx.moveTo(tx(xv), ty(yv)) : ctx.lineTo(tx(xv), ty(yv));
+  }
+  ctx.stroke();
+
+  // mark the minimum
+  let minX = xMin, minY = Infinity;
+  for (let x = xMin; x <= xMax; x += 0.05) {
+    const y = gdLoss(x); if (y < minY) { minY = y; minX = x; }
+  }
+  ctx.beginPath(); ctx.arc(tx(minX), ty(minY), 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#059669'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#059669'; ctx.font = 'bold 10px DM Mono,monospace'; ctx.textAlign = 'center';
+  ctx.fillText('min', tx(minX), ty(minY) - 10);
+  ctx.textAlign = 'left';
+
+  // history path — colour by direction to highlight overshoot
+  if (gdHistory.length > 1) {
+    for (let i = 1; i < gdHistory.length; i++) {
+      const x1 = gdHistory[i-1], x2 = gdHistory[i];
+      const y1 = gdLoss(x1), y2 = gdLoss(x2);
+      // detect overshoot: direction reversal
+      const prevDir = i > 1 ? (gdHistory[i-1] - gdHistory[i-2]) : (x2 - x1);
+      const thisDir = x2 - x1;
+      const overshoot = prevDir * thisDir < 0;
+      ctx.beginPath();
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = overshoot ? '#f97316' : 'rgba(124,58,237,0.55)';
+      ctx.lineWidth = 2;
+      ctx.moveTo(tx(x1), ty(y1)); ctx.lineTo(tx(x2), ty(y2));
+      ctx.stroke(); ctx.setLineDash([]);
+      // dot at each step (not the last — that's the ball)
+      if (i < gdHistory.length - 1) {
+        ctx.beginPath(); ctx.arc(tx(x2), ty(y2), 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = overshoot ? '#f97316' : 'rgba(124,58,237,0.5)';
+        ctx.fill();
+      }
+    }
+    // overshoot legend
+    if (gdHistory.length > 3) {
+      ctx.font = '9px DM Mono,monospace';
+      ctx.fillStyle = '#f97316'; ctx.fillText('● overshoot', pad.l, pad.t + 12);
+      ctx.fillStyle = 'rgba(124,58,237,0.8)'; ctx.fillText('● normal step', pad.l + 76, pad.t + 12);
+    }
+  }
+
+  // current ball
+  if (gdPos !== undefined) {
+    const bx = tx(gdPos), by = ty(gdLoss(gdPos));
+
+    // shadow
+    ctx.beginPath(); ctx.arc(bx, by + 5, 13, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fill();
+
+    // ball
+    const ballG = ctx.createRadialGradient(bx - 3, by - 3, 1, bx, by, 13);
+    ballG.addColorStop(0, '#fca5a5'); ballG.addColorStop(1, '#EF4444');
+    ctx.beginPath(); ctx.arc(bx, by, 13, 0, Math.PI * 2);
+    ctx.fillStyle = ballG; ctx.fill();
+    ctx.strokeStyle = '#b91c1c'; ctx.lineWidth = 2; ctx.stroke();
+
+    // gradient arrow (shows direction + magnitude of next step)
+    const g   = gdGrad(gdPos);
+    const lr  = getLR();
+    const step = -lr * g;
+    const arrowPx = step / (xMax - xMin) * cW;
+    const clampedArrow = Math.sign(arrowPx) * Math.min(Math.abs(arrowPx), 100);
+    if (Math.abs(clampedArrow) > 3) {
+      ctx.beginPath();
+      ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 2.5;
+      ctx.moveTo(bx, by); ctx.lineTo(bx + clampedArrow, by); ctx.stroke();
+      // arrowhead
+      const dir = Math.sign(clampedArrow);
+      ctx.beginPath(); ctx.fillStyle = '#7c3aed';
+      ctx.moveTo(bx + clampedArrow, by);
+      ctx.lineTo(bx + clampedArrow - dir * 9, by - 5);
+      ctx.lineTo(bx + clampedArrow - dir * 9, by + 5);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // label above ball
+    ctx.fillStyle = '#1c0505'; ctx.font = 'bold 10px DM Mono,monospace'; ctx.textAlign = 'center';
+    ctx.fillText(`w=${gdPos.toFixed(2)}`, bx, by - 18);
+    ctx.fillText(`L=${gdLoss(gdPos).toFixed(3)}`, bx, by - 6);
+    ctx.textAlign = 'left';
+
+    // step size annotation
+    if (gdHistory.length > 1 && Math.abs(clampedArrow) > 3) {
+      ctx.strokeStyle = '#7c3aed55'; ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+      ctx.beginPath(); ctx.moveTo(bx, by + 24); ctx.lineTo(bx + clampedArrow, by + 24); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#7c3aed'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'center';
+      ctx.fillText(`step=${step.toFixed(3)}`, bx + clampedArrow / 2, by + 36);
+      ctx.textAlign = 'left';
+    }
+  }
+}
+
+document.getElementById('surface-select').addEventListener('change',e=>{gdSurface=e.target.value;resetGD();});
+
+
+/* ══════════════════════════════════════════════════
+   DEMO 2 — BACKPROP MANUAL STEP-BY-STEP
+═══════════════════════════════════════════════════ */
+const LAYERS=[
+  {name:'Input',   nodes:3, color:'#6b7280'},
+  {name:'Conv1',   nodes:4, color:'#EF4444'},
+  {name:'ReLU',    nodes:4, color:'#f97316'},
+  {name:'Conv2',   nodes:4, color:'#EF4444'},
+  {name:'FC',      nodes:3, color:'#7c3aed'},
+  {name:'Softmax', nodes:2, color:'#059669'},
+];
+
+const ALL_STEPS = [
+  // Forward pass — 6 steps (index 0-5)
+  { phase:'forward', activeLayer:0, phaseTag:'→ FORWARD PASS',  tagColor:'#EF4444',
+    label:'Step 1 / 12 — Input Layer',
+    body:'Raw pixel values enter the network, normalised to 0–1. Each node holds one input feature. No computation yet — the data is simply loaded.',
+    formula:'x₀ = [0.72, 0.31, 0.85]' },
+  { phase:'forward', activeLayer:1, phaseTag:'→ FORWARD PASS',  tagColor:'#EF4444',
+    label:'Step 2 / 12 — Conv Layer 1',
+    body:'First convolutional layer: each node computes z = W·x + b, then passes through an activation. Feature maps are produced — edges and simple textures are detected.',
+    formula:'z¹ = W¹·x₀ + b¹   →   a¹ = ReLU(z¹)' },
+  { phase:'forward', activeLayer:2, phaseTag:'→ FORWARD PASS',  tagColor:'#f97316',
+    label:'Step 3 / 12 — ReLU Activation',
+    body:'max(0, z) is applied element-wise. All negative values become zero. This adds non-linearity — without it, stacking layers has no extra power.',
+    formula:'a¹ = max(0, z¹)   ← kills negatives' },
+  { phase:'forward', activeLayer:3, phaseTag:'→ FORWARD PASS',  tagColor:'#EF4444',
+    label:'Step 4 / 12 — Conv Layer 2',
+    body:'Deeper feature maps are computed. The receptive field now covers a larger region of the original image — curves, junctions, and textures are being detected.',
+    formula:'z² = W²·a¹ + b²   →   a² = ReLU(z²)' },
+  { phase:'forward', activeLayer:4, phaseTag:'→ FORWARD PASS',  tagColor:'#7c3aed',
+    label:'Step 5 / 12 — Fully Connected',
+    body:'All features are combined into class scores. Every node in FC sees every value from the previous layer — this is where "cat vs dog" decisions are made.',
+    formula:'z³ = W³·a² + b³' },
+  { phase:'forward', activeLayer:5, phaseTag:'→ FORWARD PASS',  tagColor:'#059669',
+    label:'Step 6 / 12 — Softmax + Loss',
+    body:'Softmax converts raw scores to probabilities (sum = 1). Cross-entropy loss measures how far the prediction is from the true label. Loss = 1.43. Backprop begins now.',
+    formula:'ŷ = softmax(z³)   L = −log(ŷ_correct) = 1.43' },
+
+  // Backward pass — 6 steps (index 6-11)
+  { phase:'backward', activeLayer:5, phaseTag:'← BACKWARD PASS', tagColor:'#7c3aed',
+    label:'Step 7 / 12 — Loss Gradient at Output',
+    body:'∂L/∂ŷ is computed — how much the loss changes if we nudge each output. For cross-entropy + softmax this simplifies to: gradient = ŷ − y_true. This is the seed of backprop.',
+    formula:'∂L/∂z³ = ŷ − y   (e.g. [0.72, −0.97, 0.25])' },
+  { phase:'backward', activeLayer:4, phaseTag:'← BACKWARD PASS', tagColor:'#7c3aed',
+    label:'Step 8 / 12 — FC Layer Gradients',
+    body:'Chain rule: ∂L/∂W³ = ∂L/∂z³ · (a²)ᵀ. Each FC weight gets its own gradient — how much did it contribute to the error? Larger contribution = larger gradient.',
+    formula:'∂L/∂W³ = δ³ · (a²)ᵀ   δ³ = ∂L/∂z³' },
+  { phase:'backward', activeLayer:3, phaseTag:'← BACKWARD PASS', tagColor:'#EF4444',
+    label:'Step 9 / 12 — Conv2 Gradients',
+    body:'Gradient flows back through Conv2. Backprop through a conv layer is a cross-correlation of the upstream gradient with the flipped kernel — same operation, different direction.',
+    formula:'∂L/∂W² = ∂L/∂a² ⊛ a¹   (cross-correlation)' },
+  { phase:'backward', activeLayer:2, phaseTag:'← BACKWARD PASS', tagColor:'#f97316',
+    label:'Step 10 / 12 — ReLU Gradient Gate',
+    body:'ReLU blocks gradient where z ≤ 0 (those neurons were inactive). Where z > 0, gradient passes through unchanged. Dead neurons = zero gradient = no update.',
+    formula:'∂L/∂z¹ = ∂L/∂a¹ · 𝟙[z¹ > 0]   (gate)' },
+  { phase:'backward', activeLayer:1, phaseTag:'← BACKWARD PASS', tagColor:'#EF4444',
+    label:'Step 11 / 12 — Conv1 Gradients',
+    body:'Gradient reaches the first layer. Every single weight now has ∂L/∂w computed. The signal had to travel through all 6 layers — vanishing gradients are a risk here in deep nets.',
+    formula:'∂L/∂W¹ = ∂L/∂a¹ ⊛ x₀   (all weights have gradients now)' },
+  { phase:'backward', activeLayer:0, phaseTag:'✓ WEIGHT UPDATE',  tagColor:'#059669',
+    label:'Step 12 / 12 — Weight Update',
+    body:'Optimiser applies: w ← w − η · ∂L/∂w for every weight in the network. One full training step complete! The network is now slightly better. Repeat for thousands of batches.',
+    formula:'W ← W − η · ∂L/∂W   (e.g. η = 0.001, Adam)' },
+];
+
+let bpCurrentStep = -1;
+
+function buildBPDots(){
+  const wrap = document.getElementById('bp-dots');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  ALL_STEPS.forEach((s, i) => {
+    const d = document.createElement('div');
+    const isFwd = i < 6;
+    d.style.cssText = `width:${i===5||i===6?10:8}px;height:8px;border-radius:4px;transition:all .25s;cursor:pointer;` +
+      `background:${isFwd ? '#fecaca' : '#ddd6fe'};flex-shrink:0;`;
+    d.title = `Step ${i+1}`;
+    d.addEventListener('click', () => jumpBP(i));
+    d.id = `bp-dot-${i}`;
+    wrap.appendChild(d);
+    // gap between forward and backward
+    if(i === 5){
+      const gap = document.createElement('div');
+      gap.style.cssText = 'width:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+      gap.innerHTML = '<div style="width:1px;height:12px;background:#e5e7eb"></div>';
+      wrap.appendChild(gap);
+    }
+  });
+}
+
+function updateBPDots(){
+  ALL_STEPS.forEach((_,i) => {
+    const d = document.getElementById(`bp-dot-${i}`);
+    if(!d) return;
+    const isFwd = i < 6;
+    if(i < bpCurrentStep)      d.style.background = isFwd ? '#EF4444' : '#7c3aed';
+    else if(i === bpCurrentStep){ d.style.background = isFwd ? '#EF4444' : '#7c3aed'; d.style.transform='scaleY(1.6)'; }
+    else                        { d.style.background = isFwd ? '#fecaca' : '#ddd6fe'; d.style.transform='scaleY(1)'; }
+    if(i !== bpCurrentStep) d.style.transform='scaleY(1)';
+  });
+}
+
+function renderBPStep(idx){
+  if(idx < 0 || idx >= ALL_STEPS.length) return;
+  const s = ALL_STEPS[idx];
+
+  document.getElementById('bp-step-label').textContent = s.label;
+  document.getElementById('bp-step-body').innerHTML = s.body;
+
+  // formula
+  const fEl = document.getElementById('bp-formula');
+  if(fEl){
+    if(s.formula){ fEl.style.display='block'; fEl.textContent = s.formula; }
+    else fEl.style.display='none';
+  }
+
+  // phase tag
+  const tag = document.getElementById('bp-phase-tag');
+  if(tag){ tag.textContent = s.phaseTag; tag.style.background = s.tagColor; }
+
+  // step counter + progress bar
+  document.getElementById('bp-step-counter').textContent = idx + 1;
+  const pct = ((idx + 1) / ALL_STEPS.length * 100).toFixed(0);
+  document.getElementById('bp-top-bar').style.width = pct + '%';
+
+  // hint
+  document.getElementById('bp-hint').textContent =
+    idx === ALL_STEPS.length - 1
+      ? '✓ Full training step complete! Click Reset to go again.'
+      : `Step ${idx+1} of 12 — ${idx < 6 ? 'Forward pass' : 'Backward pass'}`;
+
+  // buttons
+  document.getElementById('bp-prev-btn').disabled = (idx === 0);
+  document.getElementById('bp-next-btn').disabled = (idx === ALL_STEPS.length - 1);
+  document.getElementById('bp-next-btn').textContent = idx === ALL_STEPS.length - 2 ? 'Last →' : 'Next →';
+
+  updateBPDots();
+  drawBP(s.phase, s.activeLayer);
+}
+
+function bpGo(dir){
+  const next = bpCurrentStep + dir;
+  if(next < 0 || next >= ALL_STEPS.length) return;
+  bpCurrentStep = next;
+  renderBPStep(bpCurrentStep);
+}
+
+function jumpBP(idx){
+  bpCurrentStep = idx;
+  renderBPStep(idx);
+}
+
+function resetBP(){
+  bpCurrentStep = -1;
+  document.getElementById('bp-step-label').textContent = 'Step 0 / 12 — Ready';
+  document.getElementById('bp-step-body').textContent = 'Click Next → to begin. You will walk through 6 forward pass steps, then 6 backward pass steps — one at a time, at your own pace.';
+  const fEl = document.getElementById('bp-formula'); if(fEl) fEl.style.display='none';
+  const tag = document.getElementById('bp-phase-tag'); if(tag){ tag.textContent='FORWARD PASS'; tag.style.background='#EF4444'; }
+  document.getElementById('bp-step-counter').textContent = '0';
+  document.getElementById('bp-top-bar').style.width = '0%';
+  document.getElementById('bp-hint').textContent = 'Step 0 of 12 — press Next to start';
+  document.getElementById('bp-prev-btn').disabled = true;
+  document.getElementById('bp-next-btn').disabled = false;
+  document.getElementById('bp-next-btn').textContent = 'Next →';
+  buildBPDots();
+  drawBP('idle', -1);
+}
+
+
+/* ── drawBP ── */
+function drawBP(phase, activeLayer){
+  const canvas = document.getElementById('bp-canvas');
+  const W = canvas.clientWidth || 700, H = 280;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0f0f1a'; ctx.fillRect(0,0,W,H);
+
+  const n = LAYERS.length;
+  const pad = {l:24, r:24, t:32, b:32};
+  const layerW = (W - pad.l - pad.r) / n;
+
+  // compute node positions
+  const nodePos = LAYERS.map((layer, li) => {
+    const x = pad.l + li*layerW + layerW/2;
+    return Array.from({length:layer.nodes}, (_, ni) => {
+      const gap = Math.min(52, (H - pad.t - pad.b) / (layer.nodes + 1));
+      const totalH = gap * (layer.nodes - 1);
+      const y = H/2 - totalH/2 + ni*gap;
+      return {x, y};
+    });
+  });
+
+  const isLit = li => {
+    if(phase === 'idle') return false;
+    if(phase === 'forward')  return li <= activeLayer;
+    if(phase === 'backward') return li >= activeLayer;
+    if(phase === 'done')     return true;
+    return false;
+  };
+  const isActive = li => {
+    if(phase === 'forward')  return li === activeLayer;
+    if(phase === 'backward') return li === activeLayer;
+    return false;
+  };
+
+  // connections
+  LAYERS.forEach((_, li) => {
+    if(li === n-1) return;
+    nodePos[li].forEach(({x:x1,y:y1}) => {
+      nodePos[li+1].forEach(({x:x2,y:y2}) => {
+        const fwd_lit  = phase==='forward'  && li < activeLayer;
+        const bwd_lit  = phase==='backward' && li >= activeLayer && li <= activeLayer+1;
+        const done_lit = phase==='done';
+        ctx.beginPath();
+        ctx.strokeStyle = fwd_lit ? '#EF4444' : bwd_lit ? '#7c3aed' : done_lit ? '#059669' : '#1e293b';
+        ctx.globalAlpha = (fwd_lit||bwd_lit||done_lit) ? 0.45 : 0.12;
+        ctx.lineWidth = (isActive(li)||isActive(li+1)) ? 1.4 : 0.9;
+        ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+    });
+  });
+
+  // animated flow particles on active edge
+  if(phase !== 'idle' && activeLayer >= 0 && activeLayer < n) {
+    const li = phase === 'backward' ? activeLayer : Math.max(0, activeLayer-1);
+    const li2 = phase === 'backward' ? Math.min(n-1, li+1) : li+1;
+    if(li2 < n && nodePos[li] && nodePos[li2]) {
+      const t = (Date.now() % 900) / 900;
+      const partColor = phase === 'backward' ? '#c4b5fd' : '#fca5a5';
+      nodePos[li].forEach(({x:x1,y:y1}, pi) => {
+        const {x:x2,y:y2} = nodePos[li2][pi % nodePos[li2].length];
+        const px = phase === 'backward' ? x2 + (x1-x2)*t : x1 + (x2-x1)*t;
+        const py = phase === 'backward' ? y2 + (y1-y2)*t : y1 + (y2-y1)*t;
+        ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2);
+        ctx.fillStyle = partColor; ctx.fill();
+      });
+    }
+  }
+
+  // nodes
+  LAYERS.forEach((layer, li) => {
+    const active  = isActive(li);
+    const lit     = isLit(li);
+    const col     = phase==='done' ? '#059669'
+                  : active ? (phase==='backward' ? '#7c3aed' : layer.color)
+                  : lit    ? layer.color + 'aa'
+                  : '#1e293b';
+
+    nodePos[li].forEach(({x,y}) => {
+      const r = active ? 14 : 10;
+      // glow
+      if(active){
+        const glow = ctx.createRadialGradient(x,y,0,x,y,r+10);
+        glow.addColorStop(0, (phase==='backward'?'rgba(124,58,237,':'rgba(239,68,68,')+'0.35)');
+        glow.addColorStop(1,'transparent');
+        ctx.beginPath(); ctx.arc(x,y,r+10,0,Math.PI*2); ctx.fillStyle=glow; ctx.fill();
+      }
+      // circle
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle = col; ctx.fill();
+      ctx.strokeStyle = active ? '#fff' : '#334155';
+      ctx.lineWidth = active ? 2 : 1.2; ctx.stroke();
+      // icon
+      if(active){
+        ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font='bold 9px DM Mono,monospace'; ctx.textAlign='center';
+        ctx.fillText(phase==='backward'?'∂':'✓', x, y+3.5);
+        ctx.textAlign='left';
+      }
+    });
+
+    // layer label
+    const {x} = nodePos[li][0];
+    ctx.fillStyle = active ? '#fff' : lit ? '#9ca3af' : '#4b5563';
+    ctx.font = `${active ? 'bold ' : ''}11px Plus Jakarta Sans,sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(layer.name, x, H-10);
+    ctx.textAlign = 'left';
+  });
+
+  // direction arrow between active layers
+  if(phase !== 'idle' && activeLayer > 0 && activeLayer < n) {
+    const li1 = phase==='backward' ? activeLayer : activeLayer-1;
+    const li2 = phase==='backward' ? activeLayer-1 : activeLayer;
+    if(nodePos[li1] && nodePos[li2]){
+      const mx = (nodePos[li1][0].x + nodePos[li2][0].x) / 2;
+      ctx.fillStyle = phase==='backward' ? '#a78bfa' : '#fca5a5';
+      ctx.font = 'bold 16px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(phase==='backward' ? '←' : '→', mx, H/2 - 18);
+      ctx.textAlign='left';
+    }
+  }
+
+  // top-right phase label
+  ctx.fillStyle = phase==='backward' ? '#a78bfa' : phase==='done' ? '#6ee7b7' : '#fca5a5';
+  ctx.font = '10px DM Mono,monospace'; ctx.textAlign='right';
+  if(phase==='forward')  ctx.fillText('→ Forward pass: data flows left to right', W-pad.r, 18);
+  if(phase==='backward') ctx.fillText('← Backward pass: gradients flow right to left', W-pad.r, 18);
+  if(phase==='done')     ctx.fillText('✓ Weights updated — training step complete!', W-pad.r, 18);
+  ctx.textAlign='left';
+}
+
+// Animate particles continuously while step shown
+let bpAnimFrame;
+function bpAnimate(){
+  if(bpCurrentStep >= 0 && bpCurrentStep < ALL_STEPS.length){
+    const s = ALL_STEPS[bpCurrentStep];
+    drawBP(s.phase, s.activeLayer);
+  }
+  bpAnimFrame = requestAnimationFrame(bpAnimate);
+}
+
+/* ══════════════════════════════════════════════════
+   BATCHNORM VISUALISER
+═══════════════════════════════════════════════════ */
+function updateBN(){
+  const mean=parseFloat(document.getElementById('s-bn-mean').value);
+  const std =parseFloat(document.getElementById('s-bn-std').value);
+  document.getElementById('v-bn-mean').textContent=mean.toFixed(1);
+  document.getElementById('v-bn-std').textContent =std.toFixed(1);
+  const canvas=document.getElementById('bn-canvas');
+  const W=canvas.clientWidth||360,H=140;
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#0f0f1a';ctx.fillRect(0,0,W,H);
+  const N=80;
+  const half=W/2;
+
+  function drawDist(xOffset,mu,sigma,color,label){
+    // sample points
+    const pts=[];
+    for(let i=0;i<N;i++){
+      const u1=Math.random(),u2=Math.random();
+      const z=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
+      pts.push(mu+sigma*z);
+    }
+    // histogram
+    const lo=mu-4*sigma,hi=mu+4*sigma;
+    const bins=12,counts=new Array(bins).fill(0);
+    pts.forEach(v=>{const b=Math.floor((v-lo)/(hi-lo)*bins);if(b>=0&&b<bins)counts[b]++;});
+    const maxC=Math.max(...counts)||1;
+    const bw=(half-20)/bins;
+    counts.forEach((c,i)=>{
+      const bh=(c/maxC)*(H-40);
+      ctx.fillStyle=color+'cc';
+      ctx.fillRect(xOffset+10+i*bw,H-20-bh,bw-2,bh);
+    });
+    // label
+    ctx.fillStyle=color;ctx.font='10px DM Mono';ctx.textAlign='center';
+    ctx.fillText(label,xOffset+half/2,12);
+    ctx.fillStyle='#6b7280';ctx.font='9px DM Mono';
+    ctx.fillText(`μ=${mu.toFixed(1)}, σ=${sigma.toFixed(1)}`,xOffset+half/2,H-4);
+    ctx.textAlign='left';
+  }
+
+  drawDist(0,mean,std,'#EF4444','Before BatchNorm');
+  // divider
+  ctx.strokeStyle='#334155';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(half,0);ctx.lineTo(half,H);ctx.stroke();ctx.setLineDash([]);
+  // After BN: always N(0,1) scaled by learnable γ=1, β=0
+  drawDist(half,0,1,'#059669','After BatchNorm');
+}
+
+
+/* ══════════════════════════════════════════════════
+   DROPOUT VISUALISER
+═══════════════════════════════════════════════════ */
+function updateDropout(){
+  const p=parseFloat(document.getElementById('s-drop').value);
+  document.getElementById('v-drop').textContent=p.toFixed(2);
+  const viz=document.getElementById('dropout-viz');
+  viz.innerHTML='';
+  let dropped=0;
+  for(let i=0;i<16;i++){
+    const off=Math.random()<p;
+    if(off) dropped++;
+    const d=document.createElement('div');
+    d.className='neuron-box '+(off?'off':'on');
+    d.textContent=off?'×':(Math.random()*2).toFixed(1);
+    viz.appendChild(d);
+  }
+  document.getElementById('dropout-stats').textContent=`p=${p.toFixed(2)} · ${dropped} of 16 dropped · effective capacity ${Math.round((1-p)*100)}%`;
+}
+
+
+/* ══════════════════════════════════════════════════
+   NAV / SIDEBAR / REVEAL
+═══════════════════════════════════════════════════ */
+const SECS=['sec-1','sec-2','sec-3'];
+function getCurrentSection(){let c=0;SECS.forEach((id,i)=>{const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<window.innerHeight*.55)c=i;});return c;}
+function updateNavDots(){const c=getCurrentSection();document.querySelectorAll('.dot').forEach((d,i)=>{d.classList.toggle('active',i===c);d.classList.toggle('done',i<c);});}
+function updateSidebarProgress(){const c=getCurrentSection();const fill=document.getElementById('sb-fill');if(fill)fill.style.width=Math.min(100,57+Math.round(((c+1)/SECS.length)*10))+'%';}
+document.querySelectorAll('.dot').forEach((d,i)=>d.addEventListener('click',()=>document.getElementById(SECS[i])?.scrollIntoView({behavior:'smooth'})));
+window.addEventListener('scroll',()=>{updateNavDots();updateSidebarProgress();},{passive:true});
+const obs=new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible');}),{threshold:.07});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+/* ── INIT ── */
+window.addEventListener('load',()=>{
+  resetGD();
+  resetBP();
+  updateBN();
+  updateDropout();
+  bpAnimate();   // start particle animation loop
+});
+window.addEventListener('resize',()=>{
+  drawGD();
+  if(bpCurrentStep >= 0){
+    const s = ALL_STEPS[bpCurrentStep];
+    drawBP(s.phase, s.activeLayer);
+  } else {
+    drawBP('idle',-1);
+  }
+  updateBN();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GUVI CNN Study — Master CNNs Visually</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Nunito+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --purple:     #7D2AE8;
+  --purple-dk:  #6019C8;
+  --purple-lt:  #9B59F5;
+  --purple-bg:  #F3EEFF;
+  --purple-bgx: #EAE0FD;
+  --teal:       #00C4CC;
+  --teal-dk:    #00A3AA;
+  --teal-lt:    #33D1D8;
+  --teal-bg:    #E6FAFB;
+  --coral:      #FF6B6B;
+  --coral-bg:   #FFF0F0;
+  --amber:      #FF9F43;
+  --amber-bg:   #FFF7ED;
+  --green:      #1DD1A1;
+  --green-bg:   #E8FBF6;
+  --indigo:     #5352ED;
+  --indigo-bg:  #EEEEFF;
+  --white:      #FFFFFF;
+  --off-white:  #FFFFFF;
+  --gray-50:    #F5F4F9;
+  --gray-100:   #EEECF8;
+  --gray-200:   #DDD9F0;
+  --gray-400:   #9B95BF;
+  --gray-600:   #6B6580;
+  --gray-800:   #3D3660;
+  --ink:        #120F23;
+  --shadow-sm:  0 2px 8px rgba(125,42,232,0.10);
+  --shadow-md:  0 6px 24px rgba(125,42,232,0.13);
+  --shadow-lg:  0 16px 48px rgba(125,42,232,0.16);
+  --shadow-card:0 4px 20px rgba(0,0,0,0.07);
+  --r-sm:  10px;
+  --r-md:  16px;
+  --r-lg:  24px;
+  --r-xl:  32px;
+  --r-pill:100px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background: #ffffff;
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--gray-50); }
+::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--purple); }
+
+/* ── NAV ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 64px;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(18px) saturate(1.6);
+  border-bottom: 1px solid var(--gray-100);
+  display: flex; align-items: center;
+  padding: 0 2rem; gap: 1rem;
+  box-shadow: 0 1px 0 var(--gray-100);
+}
+
+/* GUVI logo */
+.nav-logo {
+  display: flex; align-items: center;
+  text-decoration: none; flex-shrink: 0;
+}
+
+.nav-links {
+  display: flex; align-items: center; gap: .05rem;
+  list-style: none; flex: 1; overflow-x: auto;
+}
+.nav-links::-webkit-scrollbar { height: 0; }
+.nav-links a {
+  color: var(--gray-600);
+  text-decoration: none; font-size: .78rem; font-weight: 600;
+  padding: 5px 10px; border-radius: var(--r-sm);
+  transition: all .18s; white-space: nowrap;
+}
+.nav-links a:hover { color: var(--purple); background: var(--purple-bg); }
+.nav-links a.quiz-link {
+  background: #6366f1; color: #fff; border-radius: 8px;
+  padding: 6px 13px; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(99,102,241,.3);
+}
+.nav-links a.quiz-link:hover { background: #4338ca; color: #fff; }
+
+.nav-cta {
+  margin-left: auto; flex-shrink: 0;
+  display: flex; align-items: center; gap: .625rem;
+}
+.btn-nav-ghost {
+  color: var(--purple); font-weight: 700; font-size: .8rem;
+  padding: 6px 14px; border-radius: var(--r-pill);
+  border: 2px solid var(--purple); text-decoration: none;
+  transition: all .18s; white-space: nowrap;
+}
+.btn-nav-ghost:hover { background: var(--purple-bg); }
+.btn-nav-solid {
+  background: var(--purple); color: #fff;
+  font-weight: 700; font-size: .8rem;
+  padding: 7px 18px; border-radius: var(--r-pill);
+  text-decoration: none; transition: all .18s;
+  box-shadow: 0 2px 10px rgba(125,42,232,0.35);
+  white-space: nowrap;
+}
+.btn-nav-solid:hover { background: var(--purple-dk); color: #fff; transform: translateY(-1px); }
+
+/* ── HERO ── */
+.hero {
+  padding: 108px 2rem 72px;
+  text-align: center;
+  position: relative; overflow: hidden;
+  background: #ffffff;
+}
+.hero-blob-1 { position:absolute;top:-120px;left:-200px;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(125,42,232,0.08) 0%,transparent 65%);pointer-events:none; }
+.hero-blob-2 { position:absolute;top:-80px;right:-180px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,196,204,0.07) 0%,transparent 65%);pointer-events:none; }
+.hero-blob-3 { position:absolute;bottom:-100px;left:40%;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(125,42,232,0.05) 0%,transparent 65%);pointer-events:none; }
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--purple-bg); border: 1.5px solid var(--purple-bgx);
+  color: var(--purple); font-weight: 700; font-size: .78rem;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 6px 18px; border-radius: var(--r-pill);
+  margin-bottom: 2rem;
+}
+.hero-eyebrow .dot { width:7px;height:7px;border-radius:50%;background:var(--purple);animation:blink 2s ease infinite; }
+
+.hero h1 {
+  font-family: 'Nunito', sans-serif; font-weight: 900;
+  font-size: clamp(2.75rem, 6.5vw, 5.2rem);
+  line-height: 1.07; letter-spacing: -.03em;
+  color: var(--ink); margin-bottom: 1.5rem;
+}
+.hero-grad {
+  background: linear-gradient(90deg, var(--purple) 0%, var(--teal) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.hero-sub {
+  font-size: 1.1rem; line-height: 1.75; color: var(--gray-600);
+  max-width: 540px; margin: 0 auto 2.5rem; font-weight: 500;
+}
+.hero-ctas { display:flex;justify-content:center;gap:.875rem;flex-wrap:wrap;margin-bottom:1rem; }
+.btn-hero-primary {
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--purple);color:#fff;
+  font-family:'Nunito',sans-serif;font-weight:800;font-size:1rem;
+  padding:14px 32px;border-radius:var(--r-pill);text-decoration:none;
+  box-shadow:0 4px 20px rgba(125,42,232,0.4);transition:all .22s;
+}
+.btn-hero-primary:hover{background:var(--purple-dk);color:#fff;transform:translateY(-2px);box-shadow:0 8px 28px rgba(125,42,232,0.5);text-decoration:none;}
+.btn-hero-secondary {
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--white);color:var(--gray-800);
+  font-family:'Nunito',sans-serif;font-weight:800;font-size:1rem;
+  padding:14px 30px;border-radius:var(--r-pill);text-decoration:none;
+  border:2px solid var(--gray-200);box-shadow:var(--shadow-sm);transition:all .22s;
+}
+.btn-hero-secondary:hover{border-color:var(--purple);color:var(--purple);transform:translateY(-2px);text-decoration:none;}
+.trust-line{display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:.78rem;color:var(--gray-400);font-weight:600;margin-top:1.75rem;}
+.trust-stars{color:var(--amber);letter-spacing:2px;}
+
+/* ── STATS BAND ── */
+.stats-band { background:var(--white);border-top:1px solid var(--gray-100);border-bottom:1px solid var(--gray-100);padding:2.25rem 2rem; }
+.stats-inner { max-width:900px;margin:0 auto;display:flex;justify-content:space-around;gap:2rem;flex-wrap:wrap; }
+.stat-item { text-align:center; }
+.stat-num { font-family:'Nunito',sans-serif;font-weight:900;font-size:2.4rem;line-height:1;background:linear-gradient(135deg,var(--purple),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent; }
+.stat-lbl { font-size:.75rem;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.1em;margin-top:.3rem; }
+.stat-div { width:1px;background:var(--gray-200);align-self:center;height:40px; }
+
+/* ── PIPELINE SECTION ── */
+.pipeline-section { padding:5rem 2rem 3rem;max-width:1140px;margin:0 auto; }
+.section-eyebrow { font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:.6rem; }
+.section-title { font-family:'Nunito',sans-serif;font-weight:900;font-size:clamp(1.7rem,3vw,2.4rem);color:var(--ink);letter-spacing:-.02em;margin-bottom:.5rem; }
+.section-sub { color:var(--gray-600);font-size:.92rem;font-weight:500;margin-bottom:2rem;max-width:540px; }
+.pipe-card { background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-xl);padding:2rem 1.5rem 1.5rem;box-shadow:var(--shadow-card); }
+.pipe-controls { display:flex;justify-content:center;gap:.75rem;margin-top:1.25rem; }
+.btn-pipe { display:inline-flex;align-items:center;gap:6px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.82rem;padding:9px 22px;border-radius:var(--r-pill);border:none;cursor:pointer;transition:all .2s; }
+.btn-pipe-purple { background:var(--purple);color:#fff;box-shadow:0 3px 14px rgba(125,42,232,0.35); }
+.btn-pipe-purple:hover { background:var(--purple-dk);transform:translateY(-1px); }
+.btn-pipe-ghost { background:var(--gray-50);color:var(--gray-600);border:1.5px solid var(--gray-200); }
+.btn-pipe-ghost:hover { background:var(--gray-100);color:var(--ink); }
+
+/* ── TOPIC CARDS ── */
+.topics-section { padding:2rem 2rem 5rem;max-width:1140px;margin:0 auto; }
+.topics-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem; }
+.topic-card {
+  background:var(--white);border:1.5px solid var(--gray-100);border-radius:var(--r-lg);
+  overflow:hidden;text-decoration:none;color:var(--ink);
+  display:flex;flex-direction:column;
+  transition:transform .25s,box-shadow .25s,border-color .25s;
+  box-shadow:var(--shadow-card);
+}
+.topic-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:transparent;color:var(--ink);text-decoration:none;}
+.card-top { height:80px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;position:relative;overflow:hidden; }
+.card-top-pattern { position:absolute;inset:0;opacity:.15;background-image:radial-gradient(circle,rgba(255,255,255,0.6) 1px,transparent 1px);background-size:16px 16px; }
+.card-body { padding:1.25rem;flex:1;display:flex;flex-direction:column; }
+.card-badge { display:inline-flex;align-items:center;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:var(--r-pill);margin-bottom:.75rem;width:fit-content; }
+.card-title { font-family:'Nunito',sans-serif;font-weight:900;font-size:1.05rem;letter-spacing:-.01em;color:var(--ink);margin-bottom:.2rem; }
+.card-sub { font-size:.74rem;font-weight:700;margin-bottom:.75rem; }
+.card-desc { font-size:.79rem;line-height:1.62;color:var(--gray-600);font-weight:500;flex:1;margin-bottom:1rem; }
+.card-footer { display:flex;align-items:center;justify-content:space-between;padding-top:.875rem;border-top:1px solid var(--gray-100); }
+.card-pills { display:flex;gap:.35rem;flex-wrap:wrap; }
+.card-pill { font-size:.64rem;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);background:var(--gray-50);color:var(--gray-400);border:1px solid var(--gray-200); }
+.card-go { display:flex;align-items:center;gap:4px;font-size:.75rem;font-weight:800;padding:5px 12px;border-radius:var(--r-pill);transition:all .18s; }
+
+/* ── FEATURES STRIP ── */
+.features-section { padding:5rem 2rem;max-width:1100px;margin:0 auto; }
+.features-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem; }
+.feat-card { background:var(--white);border:1.5px solid var(--gray-100);border-radius:var(--r-lg);padding:1.75rem 1.5rem;box-shadow:var(--shadow-card);transition:transform .22s,box-shadow .22s; }
+.feat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);}
+.feat-icon-wrap{width:48px;height:48px;border-radius:var(--r-sm);display:grid;place-items:center;font-size:1.4rem;margin-bottom:1rem;}
+.feat-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:.95rem;color:var(--ink);margin-bottom:.35rem;}
+.feat-desc{font-size:.81rem;color:var(--gray-600);line-height:1.65;font-weight:500;}
+
+/* ── CTA BANNER ── */
+.cta-banner {
+  margin:2rem auto 4rem;max-width:1100px;
+  background:linear-gradient(135deg,var(--purple) 0%,#5B4DE8 40%,var(--teal) 100%);
+  border-radius:var(--r-xl);padding:4.5rem 3rem;text-align:center;
+  position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(125,42,232,0.35);
+}
+.cta-banner::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.06) 1px,transparent 1px);background-size:24px 24px;}
+.cta-banner h2{font-family:'Nunito',sans-serif;font-weight:900;font-size:clamp(2rem,4vw,3.2rem);color:#fff;letter-spacing:-.02em;margin-bottom:.875rem;position:relative;}
+.cta-banner p{color:rgba(255,255,255,0.8);font-size:.98rem;font-weight:500;margin-bottom:2.25rem;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.7;position:relative;}
+.btn-cta-white{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--purple);font-family:'Nunito',sans-serif;font-weight:900;font-size:1rem;padding:14px 36px;border-radius:var(--r-pill);text-decoration:none;position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.2);transition:all .22s;}
+.btn-cta-white:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.25);color:var(--purple-dk);text-decoration:none;}
+
+footer{background:var(--white);border-top:1px solid var(--gray-100);padding:2rem;text-align:center;color:var(--gray-400);font-size:.78rem;font-weight:600;}
+footer span{color:#FF6634;}
+
+@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{opacity:0;animation:fadeUp .65s ease forwards;}
+.d1{animation-delay:.05s;}.d2{animation-delay:.18s;}.d3{animation-delay:.32s;}.d4{animation-delay:.46s;}
+
+@media(max-width:1080px){.topics-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:760px){.topics-grid{grid-template-columns:repeat(2,1fr);}.features-grid{grid-template-columns:repeat(2,1fr);}.nav-links{display:none;}}
+@media(max-width:480px){.topics-grid{grid-template-columns:1fr;}.features-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<script src="/static/neelu.js" defer></script>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/static/guvi.png" alt="GUVI" style="height:36px;width:auto;display:block;object-fit:contain;">
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="/convolution">⊕ Convolution</a></li>
+    <li><a href="/pooling">⬇ Pooling</a></li>
+    <li><a href="/activation">⚡ Activation</a></li>
+    <li><a href="/training">🎯 Training</a></li>
+    <li><a href="/architectures">🏛 Architectures</a></li>
+    <li><a href="/codeLab">💻 Code Lab</a></li>
+    <li><a href="/data-augmentation">🔀 Augmentation</a></li>
+    <li><a href="/quiz" class="quiz-link">🧠 Quiz</a></li>
+  </ul>
+
+  <div class="nav-cta">
+    <a href="#topics" class="btn-nav-ghost">Explore</a>
+    <a href="/convolution" class="btn-nav-solid">Start Learning →</a>
+  </div>
+</nav>
+
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-blob-1"></div>
+  <div class="hero-blob-2"></div>
+  <div class="hero-blob-3"></div>
+
+  <div class="hero-eyebrow fade-up d1">
+    <span class="dot"></span>
+    Visual Deep Learning · Built for HCL GUVIans
+  </div>
+
+  <h1 class="fade-up d2">
+    Learn CNNs the way<br>
+    <span class="hero-grad">your brain wants to</span>
+  </h1>
+
+  <p class="hero-sub fade-up d3">
+    Interactive demos, animated training, PyTorch & TensorFlow code,
+    AI tutoring with Neelu, and smart quizzes — all in one platform.
+  </p>
+
+  <div class="hero-ctas fade-up d4">
+    <a href="/convolution" class="btn-hero-primary">Get started → </a>
+    <a href="#pipeline-section" class="btn-hero-secondary">▶ See it in action</a>
+  </div>
+
+  <div class="trust-line fade-up d4" style="animation-delay:.58s">
+    <span class="trust-stars">★★★★★</span>
+    Built for HCL GUVIans · No account needed · Completely free
+  </div>
+</section>
+
+
+<!-- STATS BAND -->
+<div class="stats-band">
+  <div class="stats-inner">
+    {% for n, l in [('7','Core modules'), ('30+','Quiz questions'), ('2','Frameworks'), ('∞','AI answers')] %}
+    <div class="stat-item">
+      <div class="stat-num">{{ n }}</div>
+      <div class="stat-lbl">{{ l }}</div>
+    </div>
+    {% if not loop.last %}<div class="stat-div"></div>{% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+
+<!-- PIPELINE CANVAS -->
+<div class="pipeline-section" id="pipeline-section">
+  <div style="text-align:center;">
+    <div class="section-eyebrow">🔬 Architecture Visualiser</div>
+    <h2 class="section-title">A CNN, layer by layer</h2>
+    <p class="section-sub" style="margin:0 auto .5rem;">Click <strong>Run</strong> to watch data flow from raw pixels all the way to predictions.</p>
+  </div>
+  <div style="margin-top:2rem;">
+    <div class="pipe-card">
+      <canvas id="pipe-canvas" width="1060" height="200" style="width:100%;max-width:1060px;display:block;margin:0 auto;"></canvas>
+      <div class="pipe-controls">
+        <button class="btn-pipe btn-pipe-purple" onclick="runPipeline()">▶ Run Forward Pass</button>
+        <button class="btn-pipe btn-pipe-ghost"  onclick="resetPipeline()">↺ Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- TOPIC CARDS -->
+<div class="topics-section" id="topics">
+  <div style="text-align:center;margin-bottom:2.5rem;">
+    <div class="section-eyebrow">📚 Curriculum</div>
+    <h2 class="section-title">Seven modules. Zero confusion.</h2>
+    <p class="section-sub" style="margin:0 auto;">
+      Every module: concept → live interactive demo → code → quiz. Step by step.
+    </p>
+  </div>
+
+  <div class="topics-grid">
+    {% set cards = [
+      ('convolution',       '⊕', 'Convolution',           'Filters, kernels & feature maps',
+       'Watch a filter slide across an image step by step. Understand stride, padding, and how parameter sharing makes CNNs efficient.',
+       'Foundation', '#7D2AE8', '#F3EEFF', '#7D2AE8'),
+      ('pooling',           '⬇', 'Pooling',                'Downsampling & invariance',
+       'Max pool, average pool, global average pool — interactively. See how 4× fewer values still carry the same information.',
+       'Foundation', '#00C4CC', '#E6FAFB', '#00A3AA'),
+      ('activation',        '⚡', 'Activation Functions',  'ReLU, GELU, Swish & more',
+       'Without non-linearity, 100 layers equals one. Visualise every activation curve and gradient side-by-side on a live chart.',
+       'Foundation', '#FF9F43', '#FFF7ED', '#E8870A'),
+      ('training',          '🎯', 'Training CNNs',          'Backprop, loss & optimisers',
+       'Gradient descent, backprop, Adam vs SGD, BatchNorm, Dropout — with a live loss curve simulator you control.',
+       'Advanced',   '#FF6B6B', '#FFF0F0', '#E05555'),
+      ('architectures',     '🏛', 'Architectures',          'LeNet → ResNet → EfficientNet',
+       '30 years of breakthroughs on an interactive timeline. Animated ResNet skip-connections and accuracy vs params comparison.',
+       'Advanced',   '#1DD1A1', '#E8FBF6', '#17A884'),
+      ('codeLab',           '💻', 'Code Lab',               'PyTorch & TensorFlow',
+       'Build a full CNN from scratch in both frameworks. Every line explained. Transfer learning, inference, saving — all covered.',
+       'PT & TF',    '#5352ED', '#EEEEFF', '#4140C8'),
+      ('data-augmentation', '🔀', 'Data Augmentation',      'Transforms & regularisation',
+       'Flip, rotate, crop, colour-jitter, CutOut, MixUp — interactive augmentation playground with PyTorch & Keras code.',
+       'Advanced',   '#EC4899', '#FDF2F8', '#BE185D'),
+    ] %}
+
+    {% for id, icon, title, sub, desc, badge, bg, bg2, col in cards %}
+    <a href="/{{ id }}" class="topic-card">
+      <div class="card-top" style="background:linear-gradient(135deg, {{ bg }}22, {{ bg }}44);">
+        <div class="card-top-pattern"></div>
+        <span style="font-size:2.2rem;position:relative;">{{ icon }}</span>
+      </div>
+      <div class="card-body">
+        <span class="card-badge" style="background:{{ bg }}18;color:{{ col }};">{{ badge }}</span>
+        <div class="card-title">{{ title }}</div>
+        <div class="card-sub" style="color:{{ col }};">{{ sub }}</div>
+        <div class="card-desc">{{ desc }}</div>
+        <div class="card-footer">
+          <div class="card-pills">
+            <span class="card-pill">Interactive</span>
+            <span class="card-pill">Quiz</span>
+          </div>
+          <span class="card-go" style="background:{{ bg }}22;color:{{ col }};">Open →</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+
+<!-- FEATURES -->
+<div class="features-section">
+  <div style="text-align:center;margin-bottom:2.5rem;">
+    <div class="section-eyebrow">🛠 What's inside</div>
+    <h2 class="section-title">Not another theory page</h2>
+    <p class="section-sub" style="margin:0 auto;">Every concept is built to be seen, touched, and tested — not just read.</p>
+  </div>
+
+  <div class="features-grid">
+    {% for icon_bg, icon, title, desc in [
+      ('#F3EEFF','🎨','Live Canvas Demos',        'Adjust filter type, stride, padding — watch the output update in real time. The maths becomes visible.'),
+      ('#E6FAFB','🤖','Neelu — AI Tutor',          'Page-aware AI guide powered by Groq. Knows every module demo control and guides GUVIans through each interactive exercise.'),
+      ('#FFF7ED','📝','Smart AI Quizzes',           'Groq-generated questions after every module. Personalised advice based on exactly which answers you got wrong.'),
+      ('#E8FBF6','🔀','Data Augmentation Lab',      'Interactive augmentation playground — apply flip, crop, colour jitter and more. PyTorch & Keras code side-by-side.'),
+    ] %}
+    <div class="feat-card">
+      <div class="feat-icon-wrap" style="background:{{ icon_bg }};">{{ icon }}</div>
+      <div class="feat-title">{{ title }}</div>
+      <div class="feat-desc">{{ desc }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+
+<!-- CTA BANNER -->
+<div style="padding:0 2rem 5rem;">
+  <div class="cta-banner">
+    <h2>Start learning CNNs today.</h2>
+    <p>No sign-up. No paywall. Just clear, visual, hands-on learning — from convolution all the way to ResNets and transfer learning.</p>
+    <a href="/convolution" class="btn-cta-white">Begin with Convolution →</a>
+  </div>
+</div>
+
+
+<!-- FOOTER -->
+<footer>
+  Built for <span>HCL GUVIans</span>
+</footer>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
+<script>
+const LAYERS = [
+  { label:'Input\n32×32×3',   color:'#7D2AE8', text:'#7D2AE8', w:56, h:82  },
+  { label:'Conv1\n30×30×32',  color:'#9B59F5', text:'#9B59F5', w:52, h:94  },
+  { label:'ReLU',              color:'#FF9F43', text:'#FF9F43', w:34, h:88  },
+  { label:'Pool\n15×15×32',   color:'#00C4CC', text:'#00A3AA', w:48, h:76  },
+  { label:'Conv2\n13×13×64',  color:'#5352ED', text:'#5352ED', w:46, h:90  },
+  { label:'ReLU',              color:'#FF9F43', text:'#FF9F43', w:34, h:84  },
+  { label:'Pool\n6×6×64',     color:'#00C4CC', text:'#00A3AA', w:44, h:70  },
+  { label:'Flatten\n2304',    color:'#1DD1A1', text:'#17A884', w:26, h:104 },
+  { label:'FC\n512',           color:'#FF6B6B', text:'#E05555', w:24, h:88  },
+  { label:'Softmax\n10',       color:'#7D2AE8', text:'#7D2AE8', w:22, h:64  },
+];
+const pC=document.getElementById('pipe-canvas'),pX=pC.getContext('2d');
+let pStep=-1,pTimer=null;
+function drawPipeline(active){
+  pX.clearRect(0,0,pC.width,pC.height);
+  const totalW=LAYERS.reduce((s,l)=>s+l.w+22,0);
+  let x=(pC.width-totalW)/2;const cy=pC.height/2;
+  LAYERS.forEach((lay,i)=>{
+    const on=i<=active;
+    if(on){pX.shadowColor=lay.color;pX.shadowBlur=18;}
+    pX.fillStyle=on?lay.color+'22':'#F5F4F9';pX.strokeStyle=on?lay.color:'#DDD9F0';pX.lineWidth=on?2.5:1.5;
+    pX.beginPath();pX.roundRect(x,cy-lay.h/2,lay.w,lay.h,9);pX.fill();pX.stroke();
+    if(on){pX.fillStyle=lay.color+'33';pX.beginPath();pX.roundRect(x,cy-lay.h/2,lay.w,lay.h,9);pX.fill();}
+    pX.shadowBlur=0;
+    pX.fillStyle=on?lay.text:'#9B95BF';pX.font=`${on?'bold ':''}8.5px Nunito Sans`;pX.textAlign='center';
+    lay.label.split('\n').forEach((ln,li)=>pX.fillText(ln,x+lay.w/2,cy+lay.h/2+14+li*11));
+    if(i<LAYERS.length-1){
+      pX.strokeStyle=on?lay.color+'BB':'#DDD9F0';pX.lineWidth=on?2:1.5;
+      pX.beginPath();pX.moveTo(x+lay.w,cy);pX.lineTo(x+lay.w+22,cy);pX.stroke();
+      if(on){pX.fillStyle=lay.color+'BB';pX.beginPath();pX.moveTo(x+lay.w+18,cy-4);pX.lineTo(x+lay.w+18,cy+4);pX.lineTo(x+lay.w+23,cy);pX.fill();}
+    }
+    x+=lay.w+22;
+  });
+}
+function runPipeline(){if(pTimer)clearTimeout(pTimer);pStep=-1;(function tick(){pStep++;drawPipeline(pStep);if(pStep<LAYERS.length-1)pTimer=setTimeout(tick,280);})();}
+function resetPipeline(){if(pTimer)clearTimeout(pTimer);pStep=-1;drawPipeline(-1);}
+drawPipeline(-1);
+</script>
+</body>
+</html>

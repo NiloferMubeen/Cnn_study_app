@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Activation Functions — CNN Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #ffffff;
+      --bg2:      #fef3c7;
+      --white:    #ffffff;
+      --border:   #fde68a;
+      --border2:  #fcd34d;
+      --amber:    #F59E0B;
+      --amber-lt: #fef3c7;
+      --amber-md: #fcd34d;
+      --amber-dk: #b45309;
+      --orange:   #ea580c;
+      --orange-lt:#ffedd5;
+      --orange-md:#fdba74;
+      --red:      #dc2626;
+      --red-lt:   #fee2e2;
+      --green:    #059669;
+      --green-lt: #d1fae5;
+      --blue:     #0284c7;
+      --blue-lt:  #e0f2fe;
+      --blue-md:  #7dd3fc;
+      --violet:   #7c3aed;
+      --violet-lt:#ede9fb;
+      --text:   #1c0a00;
+      --text-2: #78350f;
+      --text-3: #b45309;
+      --mono:    'DM Mono', monospace;
+      --display: 'Fraunces', serif;
+      --sans:    'Plus Jakarta Sans', sans-serif;
+      --shadow-sm: 0 1px 3px rgba(245,158,11,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(245,158,11,0.12), 0 1px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 12px 40px rgba(245,158,11,0.15), 0 4px 12px rgba(0,0,0,0.06);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+    body::before { content:''; position:fixed; top:-200px; right:-200px; width:640px; height:640px; background:radial-gradient(circle,rgba(245,158,11,.09) 0%,transparent 70%); pointer-events:none; z-index:0; }
+    body::after  { content:''; position:fixed; bottom:-200px; left:-100px; width:520px; height:520px; background:radial-gradient(circle,rgba(234,88,12,.07) 0%,transparent 70%); pointer-events:none; z-index:0; }
+
+    /* NAV */
+    nav { position:sticky; top:56px; display:flex; align-items:center; justify-content:space-between; padding:12px 36px; background:rgba(255,251,240,.93); backdrop-filter:blur(12px); border-bottom:1.5px solid var(--border); z-index:100; }
+    .nav-left { display:flex; align-items:center; gap:14px; }
+    .back-btn { display:flex; align-items:center; gap:6px; text-decoration:none; color:var(--text-2); font-size:.8rem; font-family:var(--mono); padding:6px 14px; border:1.5px solid var(--border2); border-radius:8px; background:var(--white); transition:all .2s; box-shadow:var(--shadow-sm); }
+    .back-btn:hover { border-color:var(--amber); color:var(--amber-dk); }
+    .nav-badge { font-family:var(--mono); font-size:.68rem; padding:4px 10px; background:var(--amber-lt); color:var(--amber-dk); border:1.5px solid var(--amber-md); border-radius:20px; font-weight:500; letter-spacing:.06em; }
+    .progress-dots { display:flex; gap:6px; align-items:center; }
+    .dot { width:9px; height:9px; border-radius:50%; background:var(--bg2); border:1.5px solid var(--border2); cursor:pointer; transition:all .2s; }
+    .dot:hover { border-color:var(--amber); }
+    .dot.active { background:var(--amber); border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-lt); }
+    .dot.done   { background:var(--amber-lt); border-color:var(--amber); }
+
+    /* LAYOUT */
+    .page-layout { display:grid; grid-template-columns:1fr 280px; align-items:start; padding:0 32px 0 0; }
+    .main-col { min-width:0; }
+    .sidebar-col { position:sticky; top:128px; padding:32px 0 32px 28px; display:flex; flex-direction:column; gap:16px; z-index:10; }
+    @media(max-width:900px){ .page-layout{grid-template-columns:1fr;padding-right:0;} .sidebar-col{display:none;} }
+
+    /* HERO */
+    .hero { padding:64px 56px 48px; position:relative; z-index:1; }
+    .hero-eyebrow { display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:.72rem; color:var(--amber-dk); background:var(--amber-lt); border:1.5px solid var(--amber-md); padding:5px 12px; border-radius:20px; margin-bottom:20px; letter-spacing:.06em; }
+    .hero h1 { font-family:var(--display); font-size:clamp(2.2rem,5vw,3.8rem); font-weight:900; letter-spacing:-.03em; line-height:1.05; color:var(--text); margin-bottom:16px; }
+    .hero h1 span { color:var(--amber); font-style:italic; }
+    .hero p { font-size:1.05rem; color:var(--text-2); max-width:520px; line-height:1.75; }
+    .hero-accent-line { width:64px; height:5px; background:linear-gradient(90deg,var(--amber),var(--orange)); border-radius:3px; margin-bottom:20px; }
+
+    /* SECTIONS */
+    .section { position:relative; margin:0 0 60px; padding:0 56px; z-index:1; }
+    .section-header { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+    .section-num { font-family:var(--mono); font-size:.65rem; font-weight:500; color:#fff; background:var(--amber); padding:4px 9px; border-radius:6px; letter-spacing:.08em; flex-shrink:0; }
+    .section h2 { font-family:var(--display); font-size:1.5rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
+
+    /* CARDS */
+    .card { background:var(--white); border:1.5px solid var(--border); border-radius:16px; padding:28px 32px; margin-bottom:16px; box-shadow:var(--shadow-sm); }
+    .card p { color:var(--text-2); line-height:1.8; font-size:.95rem; }
+    .card p+p { margin-top:12px; }
+    .hl      { font-weight:700; color:var(--amber-dk); background:var(--amber-lt); padding:1px 6px; border-radius:4px; }
+    .hl-or   { font-weight:700; color:var(--orange);   background:var(--orange-lt); padding:1px 6px; border-radius:4px; }
+    .hl-blue { font-weight:700; color:var(--blue);     background:var(--blue-lt);  padding:1px 6px; border-radius:4px; }
+    .analogy { background:linear-gradient(135deg,#fff7ed,#ffedd5); border:1.5px solid var(--orange-md); border-left:4px solid var(--orange); border-radius:12px; padding:18px 22px; margin-top:18px; }
+    .analogy-label { font-family:var(--mono); font-size:.65rem; color:var(--orange); font-weight:500; letter-spacing:.1em; margin-bottom:8px; }
+    .analogy p { font-size:.9rem; color:#7c2d12; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media(max-width:600px){ .two-col{grid-template-columns:1fr;} }
+    .mini-card { background:var(--bg2); border:1.5px solid var(--border); border-radius:12px; padding:20px; }
+    .mini-card-title { font-family:var(--mono); font-size:.72rem; font-weight:500; color:var(--amber-dk); margin-bottom:8px; letter-spacing:.05em; }
+    .mini-card p { font-size:.87rem; color:var(--text-2); line-height:1.65; }
+
+    /* FUNCTION CARDS */
+    .fn-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    @media(max-width:700px){ .fn-grid{grid-template-columns:1fr 1fr;} }
+    .fn-card { background:var(--white); border:2px solid var(--border); border-radius:16px; padding:20px; cursor:pointer; transition:all .2s; box-shadow:var(--shadow-sm); }
+    .fn-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+    .fn-card.selected { border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-lt),var(--shadow-md); }
+    .fn-card-name { font-family:var(--display); font-weight:800; font-size:1rem; margin-bottom:3px; color:var(--text); }
+    .fn-card-tag { font-family:var(--mono); font-size:.6rem; padding:2px 7px; border-radius:20px; display:inline-block; margin-bottom:10px; }
+    .fn-card-formula { font-family:var(--mono); font-size:.72rem; color:var(--text-2); background:var(--bg2); padding:4px 8px; border-radius:6px; margin-bottom:8px; }
+    .fn-card-desc { font-size:.78rem; color:var(--text-2); line-height:1.55; }
+    .fn-spark { width:100%; height:44px; margin-bottom:10px; border-radius:6px; background:var(--bg2); display:block; }
+
+    /* DEMO */
+    .demo-wrapper { background:var(--white); border:2px solid var(--border); border-radius:20px; overflow:hidden; box-shadow:var(--shadow-lg); }
+    .demo-topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--text); flex-wrap:wrap; gap:12px; }
+    .demo-title { font-family:var(--mono); font-size:.75rem; color:#fde68a; letter-spacing:.1em; }
+    .demo-controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .ctrl-group { display:flex; align-items:center; gap:6px; }
+    .ctrl-label { font-family:var(--mono); font-size:.65rem; color:#78716c; text-transform:uppercase; letter-spacing:.08em; }
+    select { font-family:var(--mono); font-size:.72rem; background:#1c0f00; border:1px solid #44403c; color:#fde68a; border-radius:6px; padding:5px 10px; cursor:pointer; outline:none; transition:border-color .2s; }
+    select:hover { border-color:var(--amber-md); }
+    .demo-body { padding:32px 40px; background:var(--bg); display:flex; flex-direction:column; gap:24px; }
+    .canvas-row { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    @media(max-width:680px){ .canvas-row{grid-template-columns:1fr;} }
+    .canvas-card { background:var(--white); border:1.5px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow-sm); }
+    .canvas-card-title { font-family:var(--mono); font-size:.65rem; font-weight:500; text-transform:uppercase; letter-spacing:.1em; color:var(--text-3); margin-bottom:10px; }
+    canvas { width:100%; border-radius:8px; display:block; }
+    .input-row { background:var(--white); border:1.5px solid var(--border); border-radius:14px; padding:20px 24px; box-shadow:var(--shadow-sm); }
+    .slider-label { font-family:var(--mono); font-size:.65rem; color:var(--text-3); text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px; }
+    input[type=range] { width:100%; accent-color:var(--amber); height:6px; border-radius:3px; outline:none; cursor:pointer; }
+    .slider-readout { display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:12px; }
+    .readout-val { font-family:var(--mono); font-size:.88rem; color:var(--text-2); }
+    .readout-chip { display:inline-flex; align-items:center; gap:8px; background:var(--amber-lt); border:1.5px solid var(--amber-md); border-radius:10px; padding:8px 14px; }
+    .readout-chip-label { font-family:var(--mono); font-size:.68rem; color:var(--amber-dk); }
+    .readout-chip-val   { font-family:var(--mono); font-size:1rem; font-weight:700; color:var(--amber-dk); }
+    .readout-chip-grad  { display:inline-flex; align-items:center; gap:8px; background:var(--orange-lt); border:1.5px solid var(--orange-md); border-radius:10px; padding:8px 14px; }
+    .readout-chip-grad .readout-chip-label { color:var(--orange); }
+    .readout-chip-grad .readout-chip-val   { color:var(--orange); }
+
+    /* COMPARISON TABLE */
+    .cmp-table-wrap { background:var(--white); border:1.5px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); margin-top:0; }
+    table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    thead tr { background:var(--amber-lt); }
+    th { padding:12px 16px; text-align:left; font-family:var(--mono); font-size:.63rem; font-weight:500; color:var(--amber-dk); text-transform:uppercase; letter-spacing:.08em; }
+    td { padding:12px 16px; border-top:1px solid var(--border); color:var(--text-2); vertical-align:top; }
+    tr:hover td { background:#fffbf0; }
+    .td-fn { font-family:var(--display); font-weight:700; color:var(--text); font-size:.9rem; }
+    .td-chip { font-family:var(--mono); font-size:.63rem; padding:2px 8px; border-radius:20px; display:inline-block; white-space:nowrap; }
+
+    /* DEAD NEURON */
+    .dead-visual { background:var(--white); border:1.5px solid var(--border); border-radius:14px; padding:22px 26px; margin-top:16px; box-shadow:var(--shadow-sm); }
+    .dead-vis-title { font-weight:700; font-size:.9rem; color:var(--text); margin-bottom:6px; font-family:var(--display); }
+    .dead-vis-desc  { font-size:.84rem; color:var(--text-2); line-height:1.65; margin-bottom:16px; }
+    .neuron-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .neuron { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:.62rem; font-weight:700; border:2px solid transparent; }
+    .neuron.alive { background:var(--amber-lt); border-color:var(--amber); color:var(--amber-dk); }
+    .neuron.dead  { background:#f1f5f9; border-color:#cbd5e1; color:#94a3b8; }
+    .neuron-label { font-size:.72rem; color:var(--text-3); font-family:var(--mono); }
+
+    /* REVEAL */
+    .reveal { opacity:0; transform:translateY(28px); transition:opacity .55s ease,transform .55s ease; }
+    .reveal.visible { opacity:1; transform:none; }
+
+    /* SIDEBAR */
+    .sb-card { background:var(--white); border:1.5px solid var(--border); border-radius:16px; padding:18px 20px; box-shadow:var(--shadow-sm); }
+    .sb-label { font-family:var(--mono); font-size:.62rem; font-weight:500; color:var(--amber-dk); text-transform:uppercase; letter-spacing:.1em; margin-bottom:14px; }
+    .mod-list { display:flex; flex-direction:column; gap:8px; }
+    .mod-item { display:flex; align-items:center; gap:10px; }
+    .mod-check { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:.6rem; border:1.5px solid var(--border2); background:var(--bg2); }
+    .mod-check.done   { background:var(--green); border-color:var(--green); color:#fff; }
+    .mod-check.active { background:var(--amber); border-color:var(--amber-dk); color:#fff; }
+    .mod-check.locked { background:var(--bg2);   border-color:var(--border); }
+    .mod-name { font-size:.82rem; color:var(--text-3); line-height:1.3; }
+    .mod-name.done   { color:var(--text-2); font-weight:500; }
+    .mod-name.active { color:var(--amber-dk); font-weight:700; }
+    .sb-progress-row { margin-top:14px; }
+    .sb-progress-label { font-size:.7rem; color:var(--text-3); margin-bottom:6px; font-family:var(--mono); }
+    .sb-progress-track { height:6px; background:var(--bg2); border-radius:3px; overflow:hidden; }
+    .sb-progress-fill { height:100%; background:linear-gradient(90deg,var(--green),#34d399); border-radius:3px; transition:width .4s ease; }
+    .term-list { display:flex; flex-direction:column; gap:8px; }
+    .term-item { background:var(--amber-lt); border-radius:8px; padding:9px 12px; border:1px solid var(--border); }
+    .term-name { font-size:.75rem; font-weight:700; color:var(--text); margin-bottom:2px; }
+    .term-desc { font-size:.7rem; color:var(--text-3); line-height:1.5; }
+    .sb-nav { display:flex; gap:8px; }
+    .sb-nav a { flex:1; display:flex; align-items:center; justify-content:center; text-decoration:none; padding:10px; border-radius:10px; font-family:var(--mono); font-size:.72rem; font-weight:500; transition:all .2s; }
+    .sb-nav-prev { background:var(--white); color:var(--text-2); border:1.5px solid var(--border2); }
+    .sb-nav-prev:hover { border-color:var(--amber); color:var(--amber-dk); }
+    .sb-nav-next { background:var(--amber); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,.4); }
+    .sb-nav-next:hover { background:var(--amber-dk); }
+
+    /* FOOTER */
+    .page-footer { margin:0 0 72px; padding:0 56px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; z-index:1; position:relative; }
+    .coverage-box { background:var(--white); border:1.5px solid var(--border); border-radius:14px; padding:16px 20px; box-shadow:var(--shadow-sm); }
+    .coverage-label { font-family:var(--mono); font-size:.65rem; color:var(--amber-dk); font-weight:500; letter-spacing:.08em; margin-bottom:8px; }
+    .coverage-tags { display:flex; gap:6px; flex-wrap:wrap; }
+    .ctag { font-family:var(--mono); font-size:.65rem; background:var(--amber-lt); color:var(--amber-dk); border:1px solid var(--amber-md); padding:3px 9px; border-radius:20px; }
+    .footer-next { display:flex; align-items:center; gap:14px; text-decoration:none; background:var(--amber); color:#fff; padding:16px 24px; border-radius:14px; box-shadow:0 6px 20px rgba(245,158,11,.4); transition:all .2s; }
+    .footer-next:hover { background:var(--amber-dk); transform:translateX(4px); }
+    .fn-label-sm { font-family:var(--mono); font-size:.65rem; opacity:.8; letter-spacing:.06em; }
+    .fn-title-big { font-family:var(--display); font-size:1.1rem; font-weight:700; }
+    .fn-icon { font-size:1.4rem; }
+  </style>
+  <script src="/static/neelu.js" defer></script>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" class="back-btn">← Home</a>
+    <span class="nav-badge">Foundation · 03</span>
+  </div>
+  <div class="progress-dots">
+    <div class="dot active" data-sec="sec-1"></div>
+    <div class="dot" data-sec="sec-2"></div>
+    <div class="dot" data-sec="sec-3"></div>
+    <div class="dot" data-sec="sec-4"></div>
+  </div>
+</nav>
+
+<div class="page-layout">
+<div class="main-col">
+
+<!-- HERO -->
+<div class="hero reveal">
+  <div class="hero-eyebrow">⚡ Topic 3 of 6 — Foundation</div>
+  <div class="hero-accent-line"></div>
+  <h1>Activation <span>Functions</span></h1>
+  <p>Without non-linearity, a hundred layers is still just one. Explore every major activation curve — ReLU, GELU, Swish, Sigmoid — plot them live and learn exactly when to reach for each one.</p>
+</div>
+
+<!-- SEC 1 — WHY NON-LINEARITY -->
+<div class="section reveal" id="sec-1">
+  <div class="section-header"><span class="section-num">01</span><h2>Why Non-linearity?</h2></div>
+  <div class="card">
+    <p>Every convolution and pooling layer performs <em>linear</em> operations — weighted sums. Stack ten such layers with no activation functions and the entire network collapses to a single equivalent linear transformation. It could never learn curves, corners, or complex patterns.</p>
+    <p>An <span class="hl">activation function</span> is a non-linear function applied element-wise to every value in a feature map <em>after</em> a convolution. It lets the network model complex relationships — making deep networks vastly more powerful than any shallow linear model.</p>
+    <div class="analogy">
+      <div class="analogy-label">💡 Analogy</div>
+      <p>A linear layer is a dimmer switch — it can brighten or dim, but only proportionally. An activation function is the decision gate — it chooses to fire or stay silent, enabling the network to make decisions, not just scale values.</p>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="mini-card">
+      <div class="mini-card-title">WHERE THEY LIVE</div>
+      <p>Activations sit immediately <strong>after</strong> every conv or linear layer: Conv → BatchNorm → <strong>Activation</strong> → Pool. Applied to every element in the feature map independently, millions of times per forward pass.</p>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-title">KEY PROPERTIES NEEDED</div>
+      <p>A good activation must be <strong>non-linear</strong>, <strong>differentiable</strong> (for backprop), <strong>fast to compute</strong> (applied everywhere), and avoid <strong>vanishing gradients</strong> — the main killer of deep networks.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SEC 2 — FUNCTION CARDS -->
+<div class="section reveal" id="sec-2">
+  <div class="section-header"><span class="section-num">02</span><h2>The Functions — Click to Explore</h2></div>
+  <div class="card" style="margin-bottom:20px;">
+    <p>Click any card to load that function into the live plotter below. Each function handles positive and negative inputs differently — that difference is what shapes how a network learns.</p>
+  </div>
+  <div class="fn-grid" id="fn-grid">
+    <div class="fn-card selected" data-fn="relu" onclick="selectFn('relu',this)">
+      <canvas class="fn-spark" id="spark-relu"></canvas>
+      <div class="fn-card-name">ReLU</div>
+      <span class="fn-card-tag" style="background:#fef3c7;color:#b45309;border:1px solid #fcd34d;">Most used</span>
+      <div class="fn-card-formula">f(x) = max(0, x)</div>
+      <p class="fn-card-desc">Zero for negatives, identity for positives. Extremely fast. Default for hidden layers in most CNNs today.</p>
+    </div>
+    <div class="fn-card" data-fn="leaky" onclick="selectFn('leaky',this)">
+      <canvas class="fn-spark" id="spark-leaky"></canvas>
+      <div class="fn-card-name">Leaky ReLU</div>
+      <span class="fn-card-tag" style="background:#ffedd5;color:#c2410c;border:1px solid #fdba74;">Fixes dying</span>
+      <div class="fn-card-formula">f(x) = max(0.01x, x)</div>
+      <p class="fn-card-desc">Small slope (0.01) for negatives prevents neurons from permanently dying. Simple swap-in for ReLU.</p>
+    </div>
+    <div class="fn-card" data-fn="sigmoid" onclick="selectFn('sigmoid',this)">
+      <canvas class="fn-spark" id="spark-sigmoid"></canvas>
+      <div class="fn-card-name">Sigmoid</div>
+      <span class="fn-card-tag" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;">Output layers</span>
+      <div class="fn-card-formula">f(x) = 1 / (1 + e⁻ˣ)</div>
+      <p class="fn-card-desc">Squashes all values into (0, 1). Only for binary outputs — saturates and kills gradients in hidden layers.</p>
+    </div>
+    <div class="fn-card" data-fn="tanh" onclick="selectFn('tanh',this)">
+      <canvas class="fn-spark" id="spark-tanh"></canvas>
+      <div class="fn-card-name">Tanh</div>
+      <span class="fn-card-tag" style="background:#ede9fb;color:#6d28d9;border:1px solid #c4b5fd;">Zero-centred</span>
+      <div class="fn-card-formula">f(x) = (eˣ − e⁻ˣ) / (eˣ + e⁻ˣ)</div>
+      <p class="fn-card-desc">Like sigmoid but outputs (−1, 1). Zero-centred — slightly better gradients. Used in RNNs and LSTMs.</p>
+    </div>
+    <div class="fn-card" data-fn="gelu" onclick="selectFn('gelu',this)">
+      <canvas class="fn-spark" id="spark-gelu"></canvas>
+      <div class="fn-card-name">GELU</div>
+      <span class="fn-card-tag" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">Transformers</span>
+      <div class="fn-card-formula">f(x) ≈ x · σ(1.702x)</div>
+      <p class="fn-card-desc">Smooth probabilistic ReLU used in BERT, GPT, and Vision Transformers. Slightly outperforms ReLU on many tasks.</p>
+    </div>
+    <div class="fn-card" data-fn="swish" onclick="selectFn('swish',this)">
+      <canvas class="fn-spark" id="spark-swish"></canvas>
+      <div class="fn-card-name">Swish</div>
+      <span class="fn-card-tag" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;">EfficientNet</span>
+      <div class="fn-card-formula">f(x) = x · σ(x)</div>
+      <p class="fn-card-desc">Self-gated, found by neural architecture search. Slightly negative for small negatives — outperforms ReLU on very deep nets.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SEC 3 — INTERACTIVE PLOTTER -->
+<div class="section reveal" id="sec-3">
+  <div class="section-header"><span class="section-num">03</span><h2>Interactive Plotter</h2></div>
+  <div class="demo-wrapper">
+    <div class="demo-topbar">
+      <span class="demo-title" id="demo-title-label">⚡ RELU — ACTIVATION VISUALISER</span>
+      <div class="demo-controls">
+        <div class="ctrl-group">
+          <span class="ctrl-label">Function</span>
+          <select id="fn-select">
+            <option value="relu">ReLU</option>
+            <option value="leaky">Leaky ReLU</option>
+            <option value="sigmoid">Sigmoid</option>
+            <option value="tanh">Tanh</option>
+            <option value="gelu">GELU</option>
+            <option value="swish">Swish</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">Show</span>
+          <select id="show-select">
+            <option value="both">Function + Gradient</option>
+            <option value="fn">Function only</option>
+            <option value="grad">Gradient only</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="demo-body">
+      <div class="canvas-row">
+        <div class="canvas-card" id="fn-card-wrap">
+          <div class="canvas-card-title" id="fn-canvas-label">f(x) — Activation Output</div>
+          <canvas id="fn-canvas" height="200"></canvas>
+        </div>
+        <div class="canvas-card" id="grad-card-wrap">
+          <div class="canvas-card-title" id="grad-canvas-label">f′(x) — Gradient (Derivative)</div>
+          <canvas id="grad-canvas" height="200"></canvas>
+        </div>
+      </div>
+      <div class="input-row">
+        <div class="slider-label">Drag to set input value x and see output + gradient live</div>
+        <input type="range" id="x-slider" min="-4" max="4" step="0.05" value="1.5" />
+        <div class="slider-readout">
+          <span class="readout-val">x = <strong id="x-val">1.5</strong></span>
+          <div class="readout-chip">
+            <span class="readout-chip-label" id="fn-label-chip">ReLU(1.5)</span>
+            <span class="readout-chip-val"   id="fn-val-chip">1.500</span>
+          </div>
+          <div class="readout-chip-grad">
+            <span class="readout-chip-label" id="grad-label-chip">f′(1.5)</span>
+            <span class="readout-chip-val"   id="grad-val-chip">1.000</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SEC 4 — COMPARISON -->
+<div class="section reveal" id="sec-4">
+  <div class="section-header"><span class="section-num">04</span><h2>Comparison &amp; When to Use Each</h2></div>
+  <div class="cmp-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Function</th><th>Output Range</th><th>Gradient</th><th>Dead Neurons?</th><th>Best Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="td-fn">ReLU</td><td>[0, ∞)</td><td><span class="td-chip" style="background:#d1fae5;color:#059669;">0 or 1</span></td><td><span class="td-chip" style="background:#fee2e2;color:#dc2626;">Yes</span></td><td style="font-size:.8rem;">Default for CNN hidden layers. Fast and effective.</td></tr>
+        <tr><td class="td-fn">Leaky ReLU</td><td>(−∞, ∞)</td><td><span class="td-chip" style="background:#d1fae5;color:#059669;">0.01 or 1</span></td><td><span class="td-chip" style="background:#d1fae5;color:#059669;">No</span></td><td style="font-size:.8rem;">When ReLU causes too many dead neurons.</td></tr>
+        <tr><td class="td-fn">Sigmoid</td><td>(0, 1)</td><td><span class="td-chip" style="background:#ffedd5;color:#ea580c;">Saturates</span></td><td><span class="td-chip" style="background:#ffedd5;color:#ea580c;">Effectively</span></td><td style="font-size:.8rem;">Binary classification outputs only.</td></tr>
+        <tr><td class="td-fn">Tanh</td><td>(−1, 1)</td><td><span class="td-chip" style="background:#ffedd5;color:#ea580c;">Saturates</span></td><td><span class="td-chip" style="background:#ffedd5;color:#ea580c;">Effectively</span></td><td style="font-size:.8rem;">RNNs, LSTMs — better than sigmoid.</td></tr>
+        <tr><td class="td-fn">GELU</td><td>(−∞, ∞)</td><td><span class="td-chip" style="background:#d1fae5;color:#059669;">Smooth</span></td><td><span class="td-chip" style="background:#d1fae5;color:#059669;">No</span></td><td style="font-size:.8rem;">Transformers: BERT, GPT, Vision Transformer.</td></tr>
+        <tr><td class="td-fn">Swish</td><td>(−∞, ∞)</td><td><span class="td-chip" style="background:#d1fae5;color:#059669;">Smooth</span></td><td><span class="td-chip" style="background:#d1fae5;color:#059669;">No</span></td><td style="font-size:.8rem;">EfficientNet — very deep networks.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dead-visual">
+    <div class="dead-vis-title">⚰️ The Dead Neuron Problem (ReLU only)</div>
+    <div class="dead-vis-desc">If a neuron's pre-activation value is always negative, ReLU always outputs 0 and the gradient is also 0. No signal flows back. The neuron is permanently "dead" — it never updates. With high learning rates, up to 40% of neurons can die. Leaky ReLU, GELU, and Swish all solve this.</div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap;">
+      <div>
+        <div style="font-family:var(--mono);font-size:.65rem;color:var(--green);margin-bottom:8px;letter-spacing:.06em;">ALIVE — output varies</div>
+        <div class="neuron-row">
+          <div class="neuron alive">0.8</div><div class="neuron alive">1.4</div><div class="neuron alive">0.3</div><div class="neuron alive">2.1</div><div class="neuron alive">0.6</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:var(--mono);font-size:.65rem;color:var(--red);margin-bottom:8px;letter-spacing:.06em;">DEAD — always 0, never recovers</div>
+        <div class="neuron-row">
+          <div class="neuron dead">0</div><div class="neuron alive">1.1</div><div class="neuron dead">0</div><div class="neuron dead">0</div><div class="neuron alive">0.9</div><div class="neuron dead">0</div>
+        </div>
+        <div class="neuron-label" style="margin-top:6px;">4 of 6 dead — 67% capacity lost</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-top:16px;">
+    <div class="mini-card">
+      <div class="mini-card-title">PRACTICAL STARTING POINT</div>
+      <p>Start with <strong>ReLU</strong>. If you observe dead neurons (weights collapsing to zero), switch to <strong>Leaky ReLU</strong>. For transformer-based vision models use <strong>GELU</strong>. For EfficientNet-style architectures, try <strong>Swish</strong>.</p>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-title">BATCHNORM + ACTIVATION</div>
+      <p>BatchNorm (applied before activation) normalises inputs so they land near zero — right in the most sensitive region of ReLU and away from saturation zones for sigmoid/tanh. The two work together closely.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="page-footer reveal">
+  <div class="coverage-box">
+    <div class="coverage-label">TOPICS COVERED</div>
+    <div class="coverage-tags">
+      <span class="ctag">Non-linearity</span><span class="ctag">ReLU</span><span class="ctag">Leaky ReLU</span>
+      <span class="ctag">GELU</span><span class="ctag">Swish</span><span class="ctag">Dead Neurons</span><span class="ctag">Vanishing Gradients</span>
+    </div>
+  </div>
+  <a href="/training" class="footer-next">
+    <div class="fn-icon">🎯</div>
+    <div><div class="fn-label-sm">NEXT UP</div><div class="fn-title-big">Training CNNs →</div></div>
+  </a>
+</div>
+
+</div><!-- /main-col -->
+
+<!-- SIDEBAR -->
+<div class="sidebar-col">
+  <div class="sb-card">
+    <div class="sb-label">Module Progress</div>
+    <div class="mod-list">
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Convolution</span></div>
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Pooling</span></div>
+      <div class="mod-item"><div class="mod-check active">⚡</div><span class="mod-name active">Activation Functions</span></div>
+      <div class="mod-item"><div class="mod-check locked"></div><span class="mod-name">Training CNNs</span></div>
+      <div class="mod-item"><div class="mod-check locked"></div><span class="mod-name">Architectures</span></div>
+      <div class="mod-item"><div class="mod-check locked"></div><span class="mod-name">Code Lab</span></div>
+    </div>
+    <div class="sb-progress-row">
+      <div class="sb-progress-label">3 of 6 modules</div>
+      <div class="sb-progress-track"><div class="sb-progress-fill" id="sb-fill" style="width:50%"></div></div>
+    </div>
+  </div>
+  <div class="sb-card">
+    <div class="sb-label">Key Terms</div>
+    <div class="term-list">
+      <div class="term-item"><div class="term-name">Non-linearity</div><div class="term-desc">Enables networks to learn complex patterns beyond linear transforms</div></div>
+      <div class="term-item"><div class="term-name">ReLU</div><div class="term-desc">max(0,x) — zero for negatives, passthrough for positives</div></div>
+      <div class="term-item"><div class="term-name">Vanishing Gradient</div><div class="term-desc">Gradients shrink to ~0 in early layers, blocking learning</div></div>
+      <div class="term-item"><div class="term-name">Dead Neuron</div><div class="term-desc">ReLU neuron permanently stuck at zero — never recovers</div></div>
+      <div class="term-item"><div class="term-name">GELU</div><div class="term-desc">Smooth activation used in transformers (BERT, GPT, ViT)</div></div>
+      <div class="term-item"><div class="term-name">Saturation</div><div class="term-desc">When output barely changes with input — gradient dies</div></div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <a href="/pooling"  class="sb-nav-prev">← Pooling</a>
+    <a href="/training" class="sb-nav-next">Training →</a>
+  </div>
+</div>
+
+</div><!-- /page-layout -->
+
+<script>
+// ── MATH ────────────────────────────────────────────────────
+const sig = x => 1/(1+Math.exp(-x));
+const FNDEFS = {
+  relu:    { name:'ReLU',        color:'#F59E0B', f:x=>Math.max(0,x),         g:x=>x>=0?1:0,                          xr:[-4,4], yr:[-0.5,4.5]    },
+  leaky:   { name:'Leaky ReLU',  color:'#ea580c', f:x=>x>=0?x:0.01*x,        g:x=>x>=0?1:0.01,                        xr:[-4,4], yr:[-0.5,4.5]    },
+  sigmoid: { name:'Sigmoid',     color:'#0284c7', f:x=>sig(x),               g:x=>{const s=sig(x);return s*(1-s);},   xr:[-6,6], yr:[-0.1,1.2]    },
+  tanh:    { name:'Tanh',        color:'#7c3aed', f:x=>Math.tanh(x),         g:x=>1-Math.tanh(x)**2,                  xr:[-4,4], yr:[-1.3,1.3]    },
+  gelu:    { name:'GELU',        color:'#059669', f:x=>x*sig(1.702*x),       g:x=>{const s=sig(1.702*x);return s+1.702*x*s*(1-s);}, xr:[-4,4], yr:[-0.5,4.5] },
+  swish:   { name:'Swish',       color:'#dc2626', f:x=>x*sig(x),             g:x=>{const s=sig(x);return s+x*s*(1-s);}, xr:[-4,4], yr:[-0.5,4.5]  },
+};
+const GRAD_YR = { relu:[-.1,1.2], leaky:[-.05,1.1], sigmoid:[-.02,.28], tanh:[-.05,1.1], gelu:[-.1,1.2], swish:[-.2,1.2] };
+
+let currentFn = 'relu';
+
+function drawCurve(canvasId, fnKey, type, xMark) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const W = canvas.parentElement.clientWidth - 32 || 360;
+  const H = 200;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const def = FNDEFS[fnKey];
+  const [xMin,xMax] = def.xr;
+  const [yMin,yMax] = type==='grad' ? GRAD_YR[fnKey] : def.yr;
+  const tx = x=>(x-xMin)/(xMax-xMin)*W;
+  const ty = y=>H-(y-yMin)/(yMax-yMin)*H;
+  const fn = type==='grad' ? def.g : def.f;
+
+  // bg
+  ctx.fillStyle='#fffbf0'; ctx.fillRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='#fde68a55'; ctx.lineWidth=1;
+  for(let gx=Math.ceil(xMin);gx<=Math.floor(xMax);gx++){ctx.beginPath();ctx.moveTo(tx(gx),0);ctx.lineTo(tx(gx),H);ctx.stroke();}
+  const ys=(yMax-yMin)>2?1:0.5;
+  for(let gy=Math.ceil(yMin/ys)*ys;gy<=yMax;gy+=ys){ctx.beginPath();ctx.moveTo(0,ty(gy));ctx.lineTo(W,ty(gy));ctx.stroke();}
+  // axes
+  ctx.strokeStyle='#fcd34d'; ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(0,ty(0));ctx.lineTo(W,ty(0));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(tx(0),0);ctx.lineTo(tx(0),H);ctx.stroke();
+  // labels
+  ctx.fillStyle='#b45309'; ctx.font='10px DM Mono,monospace';
+  ctx.fillText('0',tx(0)+3,ty(0)-4);
+
+  // curve fill
+  ctx.beginPath();
+  for(let px=0;px<=W;px++){const xv=xMin+(px/W)*(xMax-xMin);const yv=Math.min(Math.max(fn(xv),yMin),yMax);px===0?ctx.moveTo(px,ty(yv)):ctx.lineTo(px,ty(yv));}
+  ctx.lineTo(W,ty(0));ctx.lineTo(0,ty(0));ctx.closePath();
+  ctx.fillStyle=def.color+'18'; ctx.fill();
+
+  // curve line
+  ctx.beginPath(); ctx.strokeStyle=def.color; ctx.lineWidth=2.5; ctx.lineJoin='round';
+  for(let px=0;px<=W;px++){const xv=xMin+(px/W)*(xMax-xMin);const yv=Math.min(Math.max(fn(xv),yMin),yMax);px===0?ctx.moveTo(px,ty(yv)):ctx.lineTo(px,ty(yv));}
+  ctx.stroke();
+
+  // marker
+  if(xMark!==undefined){
+    const mx=tx(xMark), yv=fn(xMark), my=ty(Math.min(Math.max(yv,yMin),yMax));
+    ctx.strokeStyle='#1c0a0066'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(mx,0);ctx.lineTo(mx,H);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(mx,my,6,0,Math.PI*2);
+    ctx.fillStyle=def.color;ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=def.color; ctx.font='bold 11px DM Mono,monospace';
+    const lx=mx<W-56?mx+9:mx-50, ly=my<18?my+16:my-6;
+    ctx.fillText(yv.toFixed(3),lx,ly);
+  }
+}
+
+function drawSpark(id, fnKey) {
+  const canvas=document.getElementById(id); if(!canvas)return;
+  const W=canvas.parentElement.clientWidth||140, H=44;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const def=FNDEFS[fnKey];
+  const [xMin,xMax]=def.xr, [yMin,yMax]=def.yr;
+  const tx=x=>(x-xMin)/(xMax-xMin)*W;
+  const ty=y=>H-(y-yMin)/(yMax-yMin)*H;
+  ctx.fillStyle='#fef9eb'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#fde68a'; ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,ty(0));ctx.lineTo(W,ty(0));ctx.stroke();
+  ctx.beginPath(); ctx.strokeStyle=def.color; ctx.lineWidth=2.2; ctx.lineJoin='round';
+  for(let px=0;px<=W;px++){const xv=xMin+(px/W)*(xMax-xMin);const yv=Math.min(Math.max(def.f(xv),yMin),yMax);px===0?ctx.moveTo(px,ty(yv)):ctx.lineTo(px,ty(yv));}
+  ctx.stroke();
+}
+
+function updateDisplay(){
+  const xv=parseFloat(document.getElementById('x-slider').value);
+  const show=document.getElementById('show-select').value;
+  const def=FNDEFS[currentFn];
+  drawCurve('fn-canvas',currentFn,'fn',xv);
+  drawCurve('grad-canvas',currentFn,'grad',xv);
+  document.getElementById('fn-card-wrap').style.display  =show==='grad'?'none':'block';
+  document.getElementById('grad-card-wrap').style.display=show==='fn'  ?'none':'block';
+  document.getElementById('x-val').textContent=xv.toFixed(2);
+  document.getElementById('fn-label-chip').textContent  =`${def.name}(${xv.toFixed(2)})`;
+  document.getElementById('fn-val-chip').textContent    =def.f(xv).toFixed(3);
+  document.getElementById('grad-label-chip').textContent=`f′(${xv.toFixed(2)})`;
+  document.getElementById('grad-val-chip').textContent  =def.g(xv).toFixed(3);
+  document.getElementById('fn-canvas-label').textContent  =`f(x) — ${def.name}`;
+  document.getElementById('grad-canvas-label').textContent=`f′(x) — ${def.name} Gradient`;
+  document.getElementById('demo-title-label').textContent =`⚡ ${def.name.toUpperCase()} — ACTIVATION VISUALISER`;
+  document.getElementById('fn-select').value=currentFn;
+}
+
+function selectFn(key,el){
+  currentFn=key;
+  document.querySelectorAll('.fn-card').forEach(c=>c.classList.remove('selected'));
+  if(el)el.classList.add('selected');
+  updateDisplay();
+  document.getElementById('sec-3').scrollIntoView({behavior:'smooth',block:'start'});
+}
+window.selectFn=selectFn;
+
+document.getElementById('fn-select').addEventListener('change',e=>{
+  currentFn=e.target.value;
+  const card=document.querySelector(`.fn-card[data-fn="${currentFn}"]`);
+  document.querySelectorAll('.fn-card').forEach(c=>c.classList.remove('selected'));
+  if(card)card.classList.add('selected');
+  updateDisplay();
+});
+document.getElementById('show-select').addEventListener('change',updateDisplay);
+document.getElementById('x-slider').addEventListener('input',updateDisplay);
+
+// NAV / SIDEBAR
+const SECS=['sec-1','sec-2','sec-3','sec-4'];
+function getCurrentSection(){let c=0;SECS.forEach((id,i)=>{const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<window.innerHeight*.55)c=i;});return c;}
+function updateNavDots(){const c=getCurrentSection();document.querySelectorAll('.dot').forEach((d,i)=>{d.classList.toggle('active',i===c);d.classList.toggle('done',i<c);});}
+function updateSidebarProgress(){const c=getCurrentSection();const fill=document.getElementById('sb-fill');if(fill)fill.style.width=Math.min(100,33+Math.round(((c+1)/SECS.length)*17))+'%';}
+document.querySelectorAll('.dot').forEach((d,i)=>d.addEventListener('click',()=>document.getElementById(SECS[i])?.scrollIntoView({behavior:'smooth'})));
+window.addEventListener('scroll',()=>{updateNavDots();updateSidebarProgress();},{passive:true});
+
+const obs=new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible');}),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+window.addEventListener('load',()=>{Object.keys(FNDEFS).forEach(k=>drawSpark(`spark-${k}`,k));updateDisplay();});
+window.addEventListener('resize',()=>{Object.keys(FNDEFS).forEach(k=>drawSpark(`spark-${k}`,k));updateDisplay();});
+</script>
+</body>
+</html>

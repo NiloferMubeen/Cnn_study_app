@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Data Augmentation — CNN Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="/static/neelu.js" defer></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --pink:#EC4899;--pink-lt:#fdf2f8;--pink-md:#f9a8d4;--pink-dk:#be185d;
+      --fuchsia:#d946ef;--fuchsia-lt:#fdf4ff;
+      --violet:#7c3aed;--violet-lt:#ede9fb;--violet-md:#c4b5fd;
+      --teal:#0d9488;--teal-lt:#ccfbf1;
+      --amber:#d97706;--amber-lt:#fef3c7;--amber-md:#fcd34d;
+      --green:#059669;--green-lt:#d1fae5;--green-md:#6ee7b7;
+      --blue:#0284c7;--blue-lt:#e0f2fe;--blue-md:#7dd3fc;
+      --red:#dc2626;--red-lt:#fee2e2;
+      --text:#1a0a14;--text-2:#831843;--text-3:#9d174d;
+      --bg:#ffffff;--bg2:#fdf2f8;--white:#ffffff;
+      --border:#fbcfe8;--border2:#f9a8d4;
+      --mono:'DM Mono',monospace;--display:'Fraunces',serif;--sans:'Plus Jakarta Sans',sans-serif;
+      --sh-sm:0 1px 3px rgba(236,72,153,.08);
+      --sh-md:0 4px 16px rgba(236,72,153,.14);
+      --sh-lg:0 12px 40px rgba(236,72,153,.18);
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:var(--sans);background:#fff;color:var(--text);overflow-x:hidden}
+    body::before{content:'';position:fixed;top:-180px;right:-180px;width:600px;height:600px;background:radial-gradient(circle,rgba(236,72,153,.07) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+    /* NAV */
+    nav{position:sticky;top:56px;display:flex;align-items:center;justify-content:space-between;padding:11px 36px;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1.5px solid var(--border);z-index:100}
+    .nav-left{display:flex;align-items:center;gap:14px}
+    .back-btn{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--text-2);font-size:.8rem;font-family:var(--mono);padding:6px 14px;border:1.5px solid var(--border2);border-radius:8px;background:#fff;transition:all .2s;box-shadow:var(--sh-sm)}
+    .back-btn:hover{border-color:var(--pink);color:var(--pink-dk)}
+    .nav-badge{font-family:var(--mono);font-size:.68rem;padding:4px 10px;background:var(--pink-lt);color:var(--pink-dk);border:1.5px solid var(--pink-md);border-radius:20px;font-weight:500;letter-spacing:.06em}
+    .progress-dots{display:flex;gap:6px;align-items:center}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--border2);cursor:pointer;transition:all .2s}
+    .dot.active{background:var(--pink);border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-lt)}
+    .dot.done{background:var(--pink-lt);border-color:var(--pink)}
+
+    /* LAYOUT */
+    .page-layout{display:grid;grid-template-columns:1fr 268px;align-items:start;padding:0 28px 0 0}
+    .main-col{min-width:0}
+    .sidebar-col{position:sticky;top:120px;padding:28px 0 28px 24px;display:flex;flex-direction:column;gap:14px;z-index:10}
+    @media(max-width:900px){.page-layout{grid-template-columns:1fr;padding-right:0}.sidebar-col{display:none}}
+
+    /* HERO */
+    .hero{padding:44px 52px 32px;position:relative;z-index:1}
+    .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;color:var(--pink-dk);background:var(--pink-lt);border:1.5px solid var(--pink-md);padding:5px 12px;border-radius:20px;margin-bottom:16px;letter-spacing:.06em}
+    .hero h1{font-family:var(--display);font-size:clamp(2rem,5vw,3.4rem);font-weight:900;letter-spacing:-.03em;line-height:1.05;margin-bottom:12px}
+    .hero h1 span{color:var(--pink);font-style:italic}
+    .hero-sub{font-size:1rem;color:var(--text-2);max-width:560px;line-height:1.7;margin-bottom:24px}
+    .hero-accent{width:56px;height:5px;background:linear-gradient(90deg,var(--pink),var(--fuchsia));border-radius:3px;margin-bottom:16px}
+
+    /* STAT PILLS */
+    .hero-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:0}
+    .hstat{background:var(--pink-lt);border:1.5px solid var(--pink-md);border-radius:12px;padding:10px 18px;text-align:center}
+    .hstat-num{font-family:var(--display);font-weight:900;font-size:1.5rem;color:var(--pink);line-height:1}
+    .hstat-lbl{font-family:var(--mono);font-size:.6rem;color:var(--pink-dk);margin-top:3px;letter-spacing:.06em;text-transform:uppercase}
+
+    /* SECTIONS */
+    .section{position:relative;margin:0 0 52px;padding:0 52px;z-index:1}
+    .section-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+    .section-num{font-family:var(--mono);font-size:.65rem;font-weight:500;color:#fff;background:var(--pink);padding:4px 9px;border-radius:6px;letter-spacing:.08em;flex-shrink:0}
+    .section h2{font-family:var(--display);font-size:1.45rem;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+
+    /* CARD */
+    .card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:24px 28px;margin-bottom:14px;box-shadow:var(--sh-sm)}
+    .card p{color:var(--text-2);line-height:1.78;font-size:.93rem}
+    .hl{font-weight:700;color:var(--pink-dk);background:var(--pink-lt);padding:1px 6px;border-radius:4px}
+
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:640px){.two-col{grid-template-columns:1fr}}
+    .mini-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:18px}
+    .mini-card-title{font-family:var(--mono);font-size:.7rem;font-weight:500;color:var(--pink-dk);margin-bottom:7px;letter-spacing:.05em}
+    .mini-card p{font-size:.86rem;color:var(--text-2);line-height:1.65}
+
+    /* ══ VISUAL COMPARISON (WHY AUG) ══ */
+    .comparison-strip{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+    @media(max-width:600px){.comparison-strip{grid-template-columns:1fr}}
+    .cmp-panel{border-radius:14px;overflow:hidden;box-shadow:var(--sh-md)}
+    .cmp-top{padding:12px 16px;font-family:var(--mono);font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+    .cmp-body{padding:16px;background:#fff}
+    .acc-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .acc-bar-label{font-family:var(--mono);font-size:.68rem;color:var(--text-2);width:110px;flex-shrink:0}
+    .acc-bar-track{flex:1;height:20px;background:var(--bg2);border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+    .acc-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-family:var(--mono);font-size:.65rem;font-weight:700;color:#fff;transition:width 1.2s ease}
+    .acc-bar-fill.no-aug{background:linear-gradient(90deg,#e5e7eb,#d1d5db);color:#374151}
+    .acc-bar-fill.with-aug{background:linear-gradient(90deg,var(--pink),var(--fuchsia))}
+
+    /* ══ MAIN DEMO — IMAGE PLAYGROUND ══ */
+    .demo-wrapper{background:#fff;border:2px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:var(--sh-lg)}
+    .demo-topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;background:var(--text);flex-wrap:wrap;gap:10px}
+    .demo-title{font-family:var(--mono);font-size:.73rem;color:#f9a8d4;letter-spacing:.1em}
+    .demo-mode-tabs{display:flex;gap:6px}
+    .mode-tab{font-family:var(--mono);font-size:.68rem;padding:5px 12px;border-radius:8px;border:none;cursor:pointer;transition:all .18s;font-weight:500}
+    .mode-tab.active{background:var(--pink);color:#fff}
+    .mode-tab:not(.active){background:rgba(255,255,255,.12);color:#f9a8d4}
+    .mode-tab:not(.active):hover{background:rgba(255,255,255,.22)}
+
+    /* Upload zone */
+    .upload-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;margin:20px 24px 0;border:2px dashed var(--pink-md);border-radius:16px;background:var(--pink-lt);cursor:pointer;transition:all .2s;text-align:center}
+    .upload-zone:hover{border-color:var(--pink);background:var(--fuchsia-lt);transform:scale(1.005)}
+    .upload-zone input{display:none}
+    .upload-icon{font-size:2.5rem}
+    .upload-label{font-family:var(--mono);font-size:.78rem;color:var(--pink-dk);font-weight:500}
+    .upload-sub{font-size:.72rem;color:var(--text-3)}
+    .sample-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+    .sample-btn{font-family:var(--mono);font-size:.68rem;padding:5px 12px;border-radius:20px;border:1.5px solid var(--pink-md);background:#fff;color:var(--pink-dk);cursor:pointer;transition:all .15s}
+    .sample-btn:hover{background:var(--pink);color:#fff;border-color:var(--pink)}
+
+    /* Canvas area */
+    .canvas-area{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:20px 24px}
+    @media(max-width:720px){.canvas-area{grid-template-columns:1fr 1fr}}
+    .canvas-cell{background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;position:relative;transition:all .2s;cursor:pointer}
+    .canvas-cell:hover{box-shadow:var(--sh-md);transform:translateY(-2px);border-color:var(--pink-md)}
+    .canvas-cell canvas{width:100%;display:block}
+    .cell-badge{position:absolute;top:6px;left:6px;font-family:var(--mono);font-size:.58rem;font-weight:700;padding:3px 7px;border-radius:8px;background:rgba(0,0,0,.55);color:#fff;backdrop-filter:blur(4px)}
+    .cell-transforms{position:absolute;bottom:0;left:0;right:0;padding:6px 8px;background:linear-gradient(to top,rgba(0,0,0,.7),transparent);font-family:var(--mono);font-size:.56rem;color:#fff;line-height:1.4;min-height:28px}
+
+    /* Controls panel */
+    .controls-panel{margin:0 24px 20px;background:var(--bg2);border:1.5px solid var(--border);border-radius:16px;padding:20px}
+    .controls-title{font-family:var(--mono);font-size:.65rem;font-weight:500;color:var(--pink-dk);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+    .aug-toggles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    @media(max-width:600px){.aug-toggles{grid-template-columns:1fr 1fr}}
+    .aug-toggle-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 8px;border-radius:12px;border:2px solid var(--border);background:#fff;cursor:pointer;transition:all .18s;font-family:var(--mono);font-size:.62rem;color:var(--text-2);text-align:center;line-height:1.3}
+    .aug-toggle-btn:hover{border-color:var(--pink-md);background:var(--pink-lt)}
+    .aug-toggle-btn.on{border-color:var(--pink);background:var(--pink-lt);color:var(--pink-dk);box-shadow:0 0 0 2px var(--pink-lt)}
+    .aug-toggle-btn .tb-icon{font-size:1.3rem}
+    .aug-toggle-btn .tb-label{font-size:.6rem;font-family:var(--mono)}
+
+    .sliders-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
+    @media(max-width:550px){.sliders-grid{grid-template-columns:1fr}}
+    .sl-row{display:flex;flex-direction:column;gap:5px}
+    .sl-header{display:flex;justify-content:space-between}
+    .sl-label{font-family:var(--mono);font-size:.68rem;color:var(--text-2)}
+    .sl-val{font-family:var(--mono);font-size:.68rem;color:var(--pink);font-weight:700}
+    input[type=range]{width:100%;accent-color:var(--pink);height:5px;border-radius:3px;outline:none;cursor:pointer}
+
+    .demo-footer{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-top:1.5px solid var(--border);background:var(--bg2);flex-wrap:wrap;gap:10px}
+    .hint-text{font-family:var(--mono);font-size:.7rem;color:var(--text-3)}
+    .btn-group{display:flex;gap:8px}
+    .btn-main{font-family:var(--mono);font-size:.76rem;font-weight:500;padding:9px 20px;border-radius:10px;border:none;cursor:pointer;transition:all .2s}
+    .btn-apply{background:var(--pink);color:#fff;box-shadow:0 3px 12px rgba(236,72,153,.35)}
+    .btn-apply:hover{background:var(--pink-dk);transform:translateY(-1px)}
+    .btn-rand{background:#fff;color:var(--text-2);border:1.5px solid var(--border2);box-shadow:var(--sh-sm)}
+    .btn-rand:hover{border-color:var(--pink);color:var(--pink-dk)}
+    .btn-live{font-family:var(--mono);font-size:.68rem;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;transition:all .2s}
+    .btn-live.on{background:var(--green-lt);color:var(--green);border:1.5px solid var(--green-md)}
+    .btn-live.off{background:var(--bg2);color:var(--text-3);border:1.5px solid var(--border)}
+
+    /* ══ BEFORE/AFTER SLIDER ══ */
+    .ba-demo{background:#fff;border:1.5px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--sh-md);margin-top:16px}
+    .ba-header{padding:12px 20px;background:var(--text);font-family:var(--mono);font-size:.7rem;color:#f9a8d4;letter-spacing:.08em}
+    .ba-body{padding:20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+    .ba-canvas-wrap{position:relative;width:280px;height:280px;border-radius:12px;overflow:hidden;cursor:col-resize;box-shadow:var(--sh-md);user-select:none}
+    #ba-canvas-before,#ba-canvas-after{position:absolute;top:0;left:0;width:280px;height:280px}
+    .ba-divider{position:absolute;top:0;bottom:0;width:3px;background:var(--pink);cursor:col-resize;z-index:10}
+    .ba-divider::before{content:'◀ ▶';position:absolute;top:50%;transform:translateY(-50%);background:var(--pink);color:#fff;font-size:.55rem;padding:4px 6px;border-radius:20px;left:-14px;white-space:nowrap;box-shadow:0 2px 8px rgba(236,72,153,.4)}
+    .ba-transform-select{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .ba-opt{font-family:var(--mono);font-size:.68rem;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border2);background:#fff;color:var(--text-2);cursor:pointer;transition:all .15s}
+    .ba-opt.selected{background:var(--pink);color:#fff;border-color:var(--pink)}
+
+    /* ══ GUESS THE TRANSFORM GAME ══ */
+    .game-card{background:#fff;border:2px solid var(--border);border-radius:20px;padding:28px;box-shadow:var(--sh-lg);position:relative;overflow:hidden}
+    .game-card::before{content:'🎮';position:absolute;top:-10px;right:20px;font-size:4rem;opacity:.06}
+    .game-title{font-family:var(--display);font-weight:900;font-size:1.2rem;margin-bottom:6px;color:var(--text)}
+    .game-sub{font-size:.84rem;color:var(--text-2);margin-bottom:20px;line-height:1.6}
+    .game-images{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+    .game-img-box{text-align:center}
+    .game-img-label{font-family:var(--mono);font-size:.65rem;color:var(--text-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+    .game-img-box canvas{border-radius:10px;border:2px solid var(--border);width:100%;display:block}
+    .game-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .game-opt{padding:11px 16px;border-radius:12px;border:2px solid var(--border);background:#fff;cursor:pointer;font-family:var(--mono);font-size:.75rem;color:var(--text-2);transition:all .18s;text-align:center;font-weight:500}
+    .game-opt:hover:not(:disabled){border-color:var(--pink);background:var(--pink-lt);color:var(--pink-dk)}
+    .game-opt.correct{background:var(--green-lt);border-color:var(--green-md);color:var(--green)}
+    .game-opt.wrong{background:var(--red-lt);border-color:#fca5a5;color:var(--red)}
+    .game-opt:disabled{cursor:not-allowed}
+    .game-score{display:flex;align-items:center;justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:8px}
+    .score-display{font-family:var(--mono);font-size:.78rem;color:var(--text-2)}
+    .score-num{font-family:var(--display);font-weight:900;font-size:1.5rem;color:var(--pink)}
+    .btn-next-q{font-family:var(--mono);font-size:.75rem;padding:8px 18px;border-radius:10px;border:none;background:var(--pink);color:#fff;cursor:pointer;transition:all .2s;display:none}
+    .btn-next-q.visible{display:block}
+    .btn-next-q:hover{background:var(--pink-dk)}
+    .game-feedback{font-size:.82rem;color:var(--text-2);font-style:italic;margin-top:8px;min-height:20px}
+
+    /* ══ TECHNIQUE FLIP CARDS ══ */
+    .flip-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    @media(max-width:680px){.flip-grid{grid-template-columns:1fr 1fr}}
+    .flip-card{perspective:800px;height:180px;cursor:pointer}
+    .flip-inner{position:relative;width:100%;height:100%;transition:transform .55s cubic-bezier(.645,.045,.355,1);transform-style:preserve-3d}
+    .flip-card:hover .flip-inner,.flip-card.flipped .flip-inner{transform:rotateY(180deg)}
+    .flip-front,.flip-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:center}
+    .flip-front{background:var(--bg2);border:1.5px solid var(--border);box-shadow:var(--sh-sm);align-items:center;text-align:center}
+    .flip-back{background:var(--text);transform:rotateY(180deg);color:#fff}
+    .flip-icon{font-size:2.2rem;margin-bottom:8px}
+    .flip-name{font-family:var(--display);font-weight:800;font-size:.95rem;color:var(--text);margin-bottom:4px}
+    .flip-hint{font-family:var(--mono);font-size:.62rem;color:var(--text-3)}
+    .flip-back-title{font-family:var(--display);font-weight:700;font-size:.92rem;margin-bottom:8px;color:#f9a8d4}
+    .flip-back-body{font-size:.78rem;line-height:1.65;color:#e2e8f0}
+    .flip-back-formula{font-family:var(--mono);font-size:.7rem;background:rgba(249,168,212,.15);padding:4px 8px;border-radius:6px;margin-top:8px;color:#f9a8d4}
+    .flip-hint-bar{text-align:center;font-family:var(--mono);font-size:.62rem;color:var(--text-3);margin-top:6px}
+
+    /* ══ CODE ACCORDION ══ */
+    .accordion{border:1.5px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh-sm);margin-top:16px}
+    .accordion-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;background:#fff;transition:background .15s;border:none;width:100%;text-align:left}
+    .accordion-header:hover{background:var(--pink-lt)}
+    .acc-title{font-family:var(--mono);font-size:.78rem;font-weight:500;color:var(--pink-dk)}
+    .acc-arrow{font-size:.75rem;color:var(--pink);transition:transform .2s}
+    .accordion-header.open .acc-arrow{transform:rotate(180deg)}
+    .accordion-body{display:none;background:#0f0f1a}
+    .accordion-body.open{display:block}
+    .code-tabs{display:flex;border-bottom:1px solid #1e1b4b}
+    .code-tab{font-family:var(--mono);font-size:.68rem;padding:8px 16px;cursor:pointer;color:#6b7280;border:none;background:transparent;transition:all .15s}
+    .code-tab.active{color:#f9a8d4;border-bottom:2px solid var(--pink)}
+    pre{margin:0;overflow-x:auto}
+    pre code{display:block;padding:18px;font-family:var(--mono);font-size:.75rem;line-height:1.75;color:#e2e8f0}
+    .kw{color:#c4b5fd}.fn{color:#86efac}.st{color:#fde68a}.cm{color:#6b7280;font-style:italic}.nb{color:#7dd3fc}
+
+    /* ══ WHEN TO USE TABLE ══ */
+    .when-table{background:#fff;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh-sm)}
+    table{width:100%;border-collapse:collapse;font-size:.83rem}
+    thead tr{background:var(--pink-lt)}
+    th{padding:11px 14px;text-align:left;font-family:var(--mono);font-size:.62rem;font-weight:500;color:var(--pink-dk);text-transform:uppercase;letter-spacing:.08em}
+    td{padding:11px 14px;border-top:1px solid var(--border);color:var(--text-2);vertical-align:top}
+    tr:hover td{background:var(--pink-lt)}
+    .td-name{font-weight:700;color:var(--text);font-family:var(--display);font-size:.88rem}
+    .td-chip{font-family:var(--mono);font-size:.62rem;padding:2px 8px;border-radius:20px;display:inline-block}
+
+    /* REVEAL */
+    .reveal{opacity:0;transform:translateY(24px);transition:opacity .5s ease,transform .5s ease}
+    .reveal.visible{opacity:1;transform:none}
+
+    /* SIDEBAR */
+    .sb-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:16px 18px;box-shadow:var(--sh-sm)}
+    .sb-label{font-family:var(--mono);font-size:.6rem;font-weight:500;color:var(--pink-dk);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+    .mod-list{display:flex;flex-direction:column;gap:7px}
+    .mod-item{display:flex;align-items:center;gap:9px}
+    .mod-check{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.58rem;border:1.5px solid var(--border2);background:var(--bg2)}
+    .mod-check.done{background:var(--green);border-color:var(--green);color:#fff}
+    .mod-check.active{background:var(--pink);border-color:var(--pink-dk);color:#fff}
+    .mod-check.locked{background:var(--bg2);border-color:var(--border)}
+    .mod-name{font-size:.8rem;color:#9ca3af;line-height:1.3}
+    .mod-name.done{color:#374151;font-weight:500}
+    .mod-name.active{color:var(--pink-dk);font-weight:700}
+    .sb-progress-row{margin-top:12px}
+    .sb-progress-label{font-size:.68rem;color:#9ca3af;margin-bottom:5px;font-family:var(--mono)}
+    .sb-progress-track{height:5px;background:var(--bg2);border-radius:3px;overflow:hidden}
+    .sb-progress-fill{height:100%;background:linear-gradient(90deg,var(--green),#34d399);border-radius:3px;transition:width .4s}
+    .term-list{display:flex;flex-direction:column;gap:7px}
+    .term-item{background:var(--pink-lt);border-radius:8px;padding:8px 11px;border:1px solid var(--border)}
+    .term-name{font-size:.73rem;font-weight:700;color:var(--text);margin-bottom:2px}
+    .term-desc{font-size:.68rem;color:var(--text-2);line-height:1.5}
+    .sb-nav{display:flex;gap:7px}
+    .sb-nav a{flex:1;display:flex;align-items:center;justify-content:center;text-decoration:none;padding:9px;border-radius:9px;font-family:var(--mono);font-size:.7rem;font-weight:500;transition:all .2s}
+    .sb-nav-prev{background:#fff;color:var(--text-2);border:1.5px solid var(--border2)}
+    .sb-nav-prev:hover{border-color:var(--pink);color:var(--pink-dk)}
+    .sb-nav-next{background:var(--pink);color:#fff;box-shadow:0 3px 12px rgba(236,72,153,.4)}
+    .sb-nav-next:hover{background:var(--pink-dk)}
+
+    /* PAGE FOOTER */
+    .page-footer{margin:0 0 64px;padding:0 52px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;z-index:1;position:relative}
+    .coverage-box{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;box-shadow:var(--sh-sm)}
+    .coverage-label{font-family:var(--mono);font-size:.63rem;color:var(--pink-dk);font-weight:500;letter-spacing:.08em;margin-bottom:7px}
+    .coverage-tags{display:flex;gap:5px;flex-wrap:wrap}
+    .ctag{font-family:var(--mono);font-size:.63rem;background:var(--pink-lt);color:var(--pink-dk);border:1px solid var(--pink-md);padding:3px 8px;border-radius:20px}
+    .footer-next{display:flex;align-items:center;gap:12px;text-decoration:none;background:var(--pink);color:#fff;padding:14px 22px;border-radius:12px;box-shadow:0 5px 18px rgba(236,72,153,.4);transition:all .2s}
+    .footer-next:hover{background:var(--pink-dk);transform:translateX(3px)}
+    .fn-label-sm{font-family:var(--mono);font-size:.63rem;opacity:.8;letter-spacing:.06em}
+    .fn-title-big{font-family:var(--display);font-size:1.05rem;font-weight:700}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" class="back-btn">← Home</a>
+    <span class="nav-badge">Advanced · 07</span>
+  </div>
+  <div class="progress-dots">
+    <div class="dot active" data-sec="sec-1"></div>
+    <div class="dot" data-sec="sec-2"></div>
+    <div class="dot" data-sec="sec-3"></div>
+    <div class="dot" data-sec="sec-4"></div>
+    <div class="dot" data-sec="sec-5"></div>
+  </div>
+</nav>
+
+<div class="page-layout">
+<div class="main-col">
+
+<!-- HERO -->
+<div class="hero reveal">
+  <div class="hero-eyebrow">🔀 Topic 7 of 7 — Advanced</div>
+  <div class="hero-accent"></div>
+  <h1>Data <span>Augmentation</span></h1>
+  <p class="hero-sub">Upload any image — or use the built-in cat 🐱 — and watch augmentations transform it live. Flip, crop, jitter, erase, MixUp. Then play the <strong>Guess the Transform</strong> game to test yourself.</p>
+  <div class="hero-stats">
+    <div class="hstat"><div class="hstat-num">+3–5%</div><div class="hstat-lbl">Accuracy on CIFAR-10</div></div>
+    <div class="hstat"><div class="hstat-num">0</div><div class="hstat-lbl">Extra parameters</div></div>
+    <div class="hstat"><div class="hstat-num">8</div><div class="hstat-lbl">Techniques covered</div></div>
+    <div class="hstat"><div class="hstat-num">∞</div><div class="hstat-lbl">Unique training views</div></div>
+  </div>
+</div>
+
+<!-- ═══ SEC 1 — WHY AUGMENTATION ═══ -->
+<div class="section reveal" id="sec-1">
+  <div class="section-header"><span class="section-num">01</span><h2>Why it matters — visually</h2></div>
+
+  <div class="card">
+    <p><span class="hl">Data augmentation</span> applies random label-preserving transforms to training images every epoch. The model never memorises pixels — it learns the concept. The gain is real and free: zero new parameters, just smarter data.</p>
+  </div>
+
+  <!-- Accuracy comparison bars (animated on scroll) -->
+  <div class="comparison-strip">
+    <div class="cmp-panel">
+      <div class="cmp-top" style="background:#f1f5f9;color:#475569;">❌ Without Augmentation</div>
+      <div class="cmp-body">
+        <div class="acc-bar-row"><span class="acc-bar-label" style="font-size:.62rem;">CIFAR-10</span><div class="acc-bar-track"><div class="acc-bar-fill no-aug" id="bar-no-cifar" style="width:0%">77%</div></div></div>
+        <div class="acc-bar-row"><span class="acc-bar-label" style="font-size:.62rem;">ImageNet Top-1</span><div class="acc-bar-track"><div class="acc-bar-fill no-aug" id="bar-no-img" style="width:0%">68%</div></div></div>
+        <div class="acc-bar-row"><span class="acc-bar-label" style="font-size:.62rem;">Tiny dataset</span><div class="acc-bar-track"><div class="acc-bar-fill no-aug" id="bar-no-tiny" style="width:0%">55%</div></div></div>
+      </div>
+    </div>
+    <div class="cmp-panel">
+      <div class="cmp-top" style="background:linear-gradient(90deg,var(--pink),var(--fuchsia));color:#fff;">✅ With Augmentation</div>
+      <div class="cmp-body">
+        <div class="acc-bar-row"><span class="acc-bar-label" style="font-size:.62rem;">CIFAR-10</span><div class="acc-bar-track"><div class="acc-bar-fill with-aug" id="bar-aug-cifar" style="width:0%">95%</div></div></div>
+        <div class="acc-bar-row"><span class="acc-bar-label" style="font-size:.62rem;">ImageNet Top-1</span><div class="acc-bar-track"><div class="acc-bar-fill with-aug" id="bar-aug-img" style="width:0%">80%</div></div></div>
+        <div class="acc-bar-row"><span class="acc-bar-label" style="font-size:.62rem;">Tiny dataset</span><div class="acc-bar-track"><div class="acc-bar-fill with-aug" id="bar-aug-tiny" style="width:0%">78%</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-top:14px">
+    <div class="mini-card">
+      <div class="mini-card-title">WHEN IS IT APPLIED?</div>
+      <p>Only during <strong>training</strong> — never at validation or inference. Applied on-the-fly each epoch in the DataLoader, so storage requirements don't grow.</p>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-title">HOW MUCH IS ENOUGH?</div>
+      <p>Start conservative. Aggressive augmentation on tasks where orientation/colour is diagnostic (e.g. pathology slides) can hurt. Measure val accuracy as you increase magnitude.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SEC 2 — INTERACTIVE PLAYGROUND ═══ -->
+<div class="section reveal" id="sec-2">
+  <div class="section-header"><span class="section-num">02</span><h2>Interactive Augmentation Playground</h2></div>
+
+  <div class="demo-wrapper">
+    <div class="demo-topbar">
+      <span class="demo-title">🔀 LIVE AUGMENTATION DEMO</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn-live on" id="btn-live" onclick="toggleLive()">⚡ Live</button>
+        <div class="demo-mode-tabs">
+          <button class="mode-tab active" id="tab-multi" onclick="setMode('multi')">4 Samples</button>
+          <button class="mode-tab" id="tab-ba"    onclick="setMode('ba')">Before/After</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload zone -->
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" accept="image/*" onchange="loadUserImage(event)">
+      <div class="upload-icon">📁</div>
+      <div class="upload-label">Drop an image or click to upload</div>
+      <div class="upload-sub">PNG, JPG, WEBP · any size · or use the default cat below</div>
+      <div class="sample-btns" onclick="event.stopPropagation()">
+        <button class="sample-btn" onclick="loadDefaultCat()">🐱 Use default cat image</button>
+      </div>
+    </div>
+
+    <!-- Multi-sample view -->
+    <div id="view-multi">
+      <div class="canvas-area">
+        <div class="canvas-cell">
+          <canvas id="c0" width="160" height="160"></canvas>
+          <div class="cell-badge">Original</div>
+          <div class="cell-transforms" id="t0">No transforms</div>
+        </div>
+        <div class="canvas-cell">
+          <canvas id="c1" width="160" height="160"></canvas>
+          <div class="cell-badge" style="background:rgba(236,72,153,.7)">A</div>
+          <div class="cell-transforms" id="t1">—</div>
+        </div>
+        <div class="canvas-cell">
+          <canvas id="c2" width="160" height="160"></canvas>
+          <div class="cell-badge" style="background:rgba(217,70,239,.7)">B</div>
+          <div class="cell-transforms" id="t2">—</div>
+        </div>
+        <div class="canvas-cell">
+          <canvas id="c3" width="160" height="160"></canvas>
+          <div class="cell-badge" style="background:rgba(124,58,237,.7)">C</div>
+          <div class="cell-transforms" id="t3">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Before/After view -->
+    <div id="view-ba" style="display:none;padding:20px 24px;display:none">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+        <div style="font-family:var(--mono);font-size:.7rem;color:var(--text-3)">← Drag the divider left/right to compare →</div>
+        <div class="ba-canvas-wrap" id="ba-wrap">
+          <canvas id="ba-canvas-before" width="280" height="280"></canvas>
+          <canvas id="ba-canvas-after"  width="280" height="280" style="clip-path:inset(0 50% 0 0)"></canvas>
+          <div class="ba-divider" id="ba-divider" style="left:140px"></div>
+        </div>
+        <div class="ba-transform-select">
+          <button class="ba-opt selected" onclick="setBaTransform('flip',this)">↔ Flip</button>
+          <button class="ba-opt" onclick="setBaTransform('crop',this)">✂️ Crop</button>
+          <button class="ba-opt" onclick="setBaTransform('jitter',this)">🌈 Jitter</button>
+          <button class="ba-opt" onclick="setBaTransform('erase',this)">⬛ Erase</button>
+          <button class="ba-opt" onclick="setBaTransform('mixup',this)">🔀 MixUp</button>
+          <button class="ba-opt" onclick="setBaTransform('blur',this)">🌫 Blur</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-panel">
+      <div class="controls-title">
+        <span>Active Transforms</span>
+        <span style="font-size:.6rem;color:var(--text-3)">Toggle on/off · adjust strength</span>
+      </div>
+      <div class="aug-toggles">
+        <button class="aug-toggle-btn on" id="atg-flip"   onclick="toggleAug('flip')">  <span class="tb-icon">↔</span><span class="tb-label">H-Flip</span></button>
+        <button class="aug-toggle-btn on" id="atg-crop"   onclick="toggleAug('crop')">  <span class="tb-icon">✂️</span><span class="tb-label">Crop</span></button>
+        <button class="aug-toggle-btn on" id="atg-jitter" onclick="toggleAug('jitter')"><span class="tb-icon">🌈</span><span class="tb-label">Jitter</span></button>
+        <button class="aug-toggle-btn on" id="atg-rot"    onclick="toggleAug('rot')">   <span class="tb-icon">🔄</span><span class="tb-label">Rotate</span></button>
+        <button class="aug-toggle-btn on" id="atg-blur"   onclick="toggleAug('blur')">  <span class="tb-icon">🌫</span><span class="tb-label">Blur</span></button>
+        <button class="aug-toggle-btn"    id="atg-erase"  onclick="toggleAug('erase')"> <span class="tb-icon">⬛</span><span class="tb-label">Erase</span></button>
+        <button class="aug-toggle-btn"    id="atg-mixup"  onclick="toggleAug('mixup')"> <span class="tb-icon">🔀</span><span class="tb-label">MixUp</span></button>
+        <button class="aug-toggle-btn on" id="atg-vflip"  onclick="toggleAug('vflip')"> <span class="tb-icon">↕</span><span class="tb-label">V-Flip</span></button>
+      </div>
+      <div class="sliders-grid">
+        <div class="sl-row">
+          <div class="sl-header"><span class="sl-label">☀️ Brightness</span><span class="sl-val" id="v-bright">0.35</span></div>
+          <input type="range" id="s-bright" min="0" max="0.9" step="0.05" value="0.35" oninput="onSlider('bright')">
+        </div>
+        <div class="sl-row">
+          <div class="sl-header"><span class="sl-label">🎨 Saturation</span><span class="sl-val" id="v-sat">0.4</span></div>
+          <input type="range" id="s-sat" min="0" max="1" step="0.05" value="0.4" oninput="onSlider('sat')">
+        </div>
+        <div class="sl-row">
+          <div class="sl-header"><span class="sl-label">🔄 Rotation ±°</span><span class="sl-val" id="v-rot">20</span></div>
+          <input type="range" id="s-rot" min="0" max="45" step="1" value="20" oninput="onSlider('rot')">
+        </div>
+        <div class="sl-row">
+          <div class="sl-header"><span class="sl-label">✂️ Crop padding</span><span class="sl-val" id="v-crop">12</span></div>
+          <input type="range" id="s-crop" min="0" max="30" step="1" value="12" oninput="onSlider('crop')">
+        </div>
+        <div class="sl-row">
+          <div class="sl-header"><span class="sl-label">🌫 Blur radius</span><span class="sl-val" id="v-blur">1.5</span></div>
+          <input type="range" id="s-blur" min="0" max="5" step="0.5" value="1.5" oninput="onSlider('blur')">
+        </div>
+        <div class="sl-row">
+          <div class="sl-header"><span class="sl-label">🔀 MixUp λ</span><span class="sl-val" id="v-mixup">0.4</span></div>
+          <input type="range" id="s-mixup" min="0.1" max="0.9" step="0.05" value="0.4" oninput="onSlider('mixup')">
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-footer">
+      <div class="hint-text" id="aug-hint">Loading cat image…</div>
+      <div class="btn-group">
+        <button class="btn-main btn-rand"  onclick="resetDemo()">↺ Reset</button>
+        <button class="btn-main btn-rand"  onclick="randomiseAll()">🎲 Randomise</button>
+        <button class="btn-main btn-apply" onclick="applyAll()">▶ Apply</button>
+      </div>
+    </div>
+  </div><!-- /demo-wrapper -->
+</div>
+
+<!-- ═══ SEC 3 — GUESS THE TRANSFORM GAME ═══ -->
+<div class="section reveal" id="sec-3">
+  <div class="section-header"><span class="section-num">03</span><h2>🎮 Guess the Transform!</h2></div>
+
+  <div class="game-card">
+    <div class="game-title">Can you spot what happened?</div>
+    <div class="game-sub">Look at the original and the augmented image. Pick which transform was applied. Score as many as you can!</div>
+    <div class="game-images">
+      <div class="game-img-box">
+        <div class="game-img-label">Original</div>
+        <canvas id="game-orig" width="200" height="200"></canvas>
+      </div>
+      <div class="game-img-box">
+        <div class="game-img-label">Augmented — what changed?</div>
+        <canvas id="game-aug" width="200" height="200"></canvas>
+      </div>
+    </div>
+    <div class="game-options" id="game-options"></div>
+    <div class="game-feedback" id="game-feedback"></div>
+    <div class="game-score">
+      <div class="score-display">Score: <span class="score-num" id="game-score">0</span> / <span id="game-total">0</span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-next-q" id="btn-reset-game" onclick="resetGame()" style="display:block;background:#fff;color:var(--pink-dk);border:1.5px solid var(--pink-md);">↺ Reset</button>
+        <button class="btn-next-q" id="btn-next-q" onclick="nextQuestion()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SEC 4 — TECHNIQUE FLIP CARDS ═══ -->
+<div class="section reveal" id="sec-4">
+  <div class="section-header"><span class="section-num">04</span><h2>Technique Cards — Hover to flip</h2></div>
+  <p style="font-size:.84rem;color:var(--text-2);margin-bottom:18px;line-height:1.7;">Each card shows the technique on the front. Hover (or tap) to flip and see the formula, use-case, and expected accuracy gain.</p>
+
+  <div class="flip-grid" id="flip-grid"></div>
+  <div class="flip-hint-bar" style="margin-top:10px;">👆 Hover or tap to flip · Click to lock flipped state</div>
+</div>
+
+<!-- ═══ SEC 5 — CODE + WHEN TO USE ═══ -->
+<div class="section reveal" id="sec-5">
+  <div class="section-header"><span class="section-num">05</span><h2>Code &amp; When to Use</h2></div>
+
+  <div class="accordion" id="acc-pt">
+    <button class="accordion-header" id="acc-pt-btn" onclick="toggleAccordion('pt')">
+      <span class="acc-title">🔥 PyTorch — torchvision.transforms (full pipeline)</span>
+      <span class="acc-arrow" id="arr-pt">▼</span>
+    </button>
+    <div class="accordion-body" id="body-pt">
+      <pre><code><span class="kw">import</span> torchvision.transforms <span class="kw">as</span> T
+
+train_tfm = T.<span class="fn">Compose</span>([
+    T.<span class="fn">RandomCrop</span>(<span class="nb">32</span>, padding=<span class="nb">4</span>),          <span class="cm"># pad then crop</span>
+    T.<span class="fn">RandomHorizontalFlip</span>(p=<span class="nb">0.5</span>),         <span class="cm"># 50% chance</span>
+    T.<span class="fn">ColorJitter</span>(brightness=<span class="nb">0.3</span>,
+                   contrast=<span class="nb">0.3</span>, saturation=<span class="nb">0.3</span>, hue=<span class="nb">0.05</span>),
+    T.<span class="fn">RandomRotation</span>(<span class="nb">15</span>),
+    T.<span class="fn">GaussianBlur</span>(kernel_size=<span class="nb">3</span>, sigma=(<span class="nb">0.1</span>,<span class="nb">1.5</span>)),
+    T.<span class="fn">ToTensor</span>(),
+    T.<span class="fn">Normalize</span>(mean=[<span class="nb">.5</span>,<span class="nb">.5</span>,<span class="nb">.5</span>], std=[<span class="nb">.5</span>,<span class="nb">.5</span>,<span class="nb">.5</span>]),
+    T.<span class="fn">RandomErasing</span>(p=<span class="nb">0.5</span>, scale=(<span class="nb">0.02</span>,<span class="nb">0.33</span>)),
+])
+
+<span class="cm"># RandAugment — drop-in replacement</span>
+rand_tfm = T.<span class="fn">Compose</span>([
+    T.<span class="fn">RandAugment</span>(num_ops=<span class="nb">2</span>, magnitude=<span class="nb">9</span>),
+    T.<span class="fn">ToTensor</span>(),
+    T.<span class="fn">Normalize</span>(mean=[<span class="nb">.5</span>,<span class="nb">.5</span>,<span class="nb">.5</span>], std=[<span class="nb">.5</span>,<span class="nb">.5</span>,<span class="nb">.5</span>]),
+])
+
+<span class="cm"># MixUp — in the training loop</span>
+<span class="kw">def</span> <span class="fn">mixup_batch</span>(x, y, alpha=<span class="nb">0.2</span>):
+    lam = np.<span class="fn">random.beta</span>(alpha, alpha)
+    idx = torch.<span class="fn">randperm</span>(x.size(<span class="nb">0</span>))
+    x_mix = lam * x + (<span class="nb">1</span> - lam) * x[idx]
+    <span class="kw">return</span> x_mix, y, y[idx], lam
+
+<span class="cm"># Val/test — no augmentation</span>
+val_tfm = T.<span class="fn">Compose</span>([T.<span class="fn">ToTensor</span>(),
+    T.<span class="fn">Normalize</span>(mean=[<span class="nb">.5</span>,<span class="nb">.5</span>,<span class="nb">.5</span>], std=[<span class="nb">.5</span>,<span class="nb">.5</span>,<span class="nb">.5</span>])])</code></pre>
+    </div>
+  </div>
+
+  <div class="accordion" id="acc-tf" style="margin-top:10px">
+    <button class="accordion-header" id="acc-tf-btn" onclick="toggleAccordion('tf')">
+      <span class="acc-title">🟡 TensorFlow / Keras — Augmentation layers</span>
+      <span class="acc-arrow" id="arr-tf">▼</span>
+    </button>
+    <div class="accordion-body" id="body-tf">
+      <pre><code><span class="kw">import</span> tensorflow <span class="kw">as</span> tf
+<span class="kw">from</span> tensorflow.keras <span class="kw">import</span> layers
+
+aug_layer = tf.keras.<span class="fn">Sequential</span>([
+    layers.<span class="fn">RandomFlip</span>(<span class="st">"horizontal"</span>),
+    layers.<span class="fn">RandomCrop</span>(<span class="nb">32</span>, <span class="nb">32</span>),
+    layers.<span class="fn">RandomTranslation</span>(<span class="nb">0.1</span>, <span class="nb">0.1</span>),
+    layers.<span class="fn">RandomRotation</span>(<span class="nb">0.08</span>),
+    layers.<span class="fn">RandomBrightness</span>(<span class="nb">0.3</span>),
+    layers.<span class="fn">RandomContrast</span>(<span class="nb">0.3</span>),
+], name=<span class="st">"augmentation"</span>)
+
+<span class="cm"># MixUp with tf.data</span>
+<span class="kw">def</span> <span class="fn">mixup</span>(ds_one, ds_two, alpha=<span class="nb">0.2</span>):
+    <span class="kw">for</span> (x1,y1),(x2,y2) <span class="kw">in</span> <span class="fn">zip</span>(ds_one, ds_two):
+        lam = tf.random.<span class="fn">uniform</span>(())
+        x_mix = lam*x1 + (<span class="nb">1</span>-lam)*x2
+        y_mix = lam*y1 + (<span class="nb">1</span>-lam)*y2
+        <span class="kw">yield</span> x_mix, y_mix</code></pre>
+    </div>
+  </div>
+
+  <div class="when-table" style="margin-top:20px">
+    <table>
+      <thead><tr><th>Technique</th><th>Best For</th><th>Avoid When</th><th>Gain</th></tr></thead>
+      <tbody>
+        <tr><td class="td-name">H-Flip</td><td>Natural images</td><td>Text, asymmetric tasks</td><td><span class="td-chip" style="background:var(--green-lt);color:var(--green);">+0.5–1%</span></td></tr>
+        <tr><td class="td-name">Random Crop</td><td>All classification</td><td>Very small objects</td><td><span class="td-chip" style="background:var(--green-lt);color:var(--green);">+1–2%</span></td></tr>
+        <tr><td class="td-name">Colour Jitter</td><td>Outdoor/natural scenes</td><td>Medical (colour is diagnostic)</td><td><span class="td-chip" style="background:var(--green-lt);color:var(--green);">+0.5–1.5%</span></td></tr>
+        <tr><td class="td-name">Random Erase</td><td>Fine-grained, detection</td><td>Tiny object datasets</td><td><span class="td-chip" style="background:var(--green-lt);color:var(--green);">+1–2%</span></td></tr>
+        <tr><td class="td-name">MixUp</td><td>Large-scale classification</td><td>Regression / detection</td><td><span class="td-chip" style="background:var(--pink-lt);color:var(--pink-dk);">+0.5–2%</span></td></tr>
+        <tr><td class="td-name">RandAugment</td><td>All — auto-tunes policy</td><td>Tiny datasets (&lt;500 imgs)</td><td><span class="td-chip" style="background:var(--pink-lt);color:var(--pink-dk);">+2–4%</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="page-footer reveal">
+  <div class="coverage-box">
+    <div class="coverage-label">TOPICS COVERED</div>
+    <div class="coverage-tags">
+      <span class="ctag">Flip</span><span class="ctag">Crop</span><span class="ctag">Jitter</span>
+      <span class="ctag">Erase</span><span class="ctag">MixUp</span><span class="ctag">RandAugment</span><span class="ctag">TTA</span>
+    </div>
+  </div>
+  <a href="/quiz" class="footer-next">
+    <div class="fn-icon">🧠</div>
+    <div><div class="fn-label-sm">TEST YOURSELF</div><div class="fn-title-big">Take the Quiz →</div></div>
+  </a>
+</div>
+
+</div><!-- /main-col -->
+
+<!-- SIDEBAR -->
+<div class="sidebar-col">
+  <div class="sb-card">
+    <div class="sb-label">Module Progress</div>
+    <div class="mod-list">
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Convolution</span></div>
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Pooling</span></div>
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Activation Functions</span></div>
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Training CNNs</span></div>
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Architectures</span></div>
+      <div class="mod-item"><div class="mod-check done">✓</div><span class="mod-name done">Code Lab</span></div>
+      <div class="mod-item"><div class="mod-check active">🔀</div><span class="mod-name active">Data Augmentation</span></div>
+    </div>
+    <div class="sb-progress-row">
+      <div class="sb-progress-label">7 of 7 — All done! 🎉</div>
+      <div class="sb-progress-track"><div class="sb-progress-fill" id="sb-fill" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div class="sb-card">
+    <div class="sb-label">Key Terms</div>
+    <div class="term-list">
+      <div class="term-item"><div class="term-name">Augmentation</div><div class="term-desc">Random label-preserving transforms applied each training epoch</div></div>
+      <div class="term-item"><div class="term-name">MixUp</div><div class="term-desc">x̃ = λxᵢ + (1−λ)xⱼ — blends two images and their labels</div></div>
+      <div class="term-item"><div class="term-name">RandomErasing</div><div class="term-desc">Randomly zeros a rectangular patch to prevent feature over-reliance</div></div>
+      <div class="term-item"><div class="term-name">RandAugment</div><div class="term-desc">Auto-samples N transforms at magnitude M — no manual tuning</div></div>
+      <div class="term-item"><div class="term-name">TTA</div><div class="term-desc">Test-Time Augmentation — average N augmented predictions at inference</div></div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <a href="/codeLab" class="sb-nav-prev">← Code Lab</a>
+    <a href="/quiz"    class="sb-nav-next">Quiz →</a>
+  </div>
+</div>
+</div><!-- /page-layout -->
+
+<script>
+/* ════════════════════════════════════════════
+   CORE IMAGE ENGINE — loads real images
+═══════════════════════════════════════════════ */
+const W=160, H=160;
+let sourceImg = null;   // HTMLImageElement of the current image
+let liveMode  = true;
+let currentMode = 'multi';
+let baTransform = 'flip';
+let baPos = 140;
+let augState = { flip:true, crop:true, jitter:true, rot:true, blur:true, erase:false, mixup:false, vflip:true };
+
+/* Load the default cat from /static/cat.png */
+function loadDefaultCat(then) {
+  loadImageFromURL('/static/cat.png', 'Default cat image loaded', then);
+}
+
+/* Load any image URL into sourceImg */
+function loadImageFromURL(url, hint, then) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    sourceImg = img;
+    applyAll();
+    setupGameCanvases();
+    nextQuestion();
+    updateBA();
+    if (hint) document.getElementById('aug-hint').textContent = hint;
+    if (then) then();
+  };
+  img.onerror = () => {
+    document.getElementById('aug-hint').textContent =
+      '⚠️ Could not load ' + url + '. Make sure cat.png is in your static/ folder.';
+  };
+  img.src = url;
+}
+
+/* Draw current sourceImg (or placeholder) onto a canvas context */
+function drawSource(ctx, w, h) {
+  if (sourceImg) {
+    // Draw maintaining aspect ratio, centred
+    const scale = Math.min(w / sourceImg.naturalWidth, h / sourceImg.naturalHeight);
+    const sw = sourceImg.naturalWidth * scale;
+    const sh = sourceImg.naturalHeight * scale;
+    const ox = (w - sw) / 2;
+    const oy = (h - sh) / 2;
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(sourceImg, ox, oy, sw, sh);
+  } else {
+    // Placeholder while image loads
+    ctx.fillStyle = '#fdf2f8';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#f9a8d4';
+    ctx.font = `${w * 0.12}px Plus Jakarta Sans, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Click "Use default cat"', w/2, h/2 - 10);
+    ctx.fillText('or upload your image', w/2, h/2 + 14);
+    ctx.textAlign = 'left';
+  }
+}
+
+function getSourceImageData() {
+  const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
+  drawSource(tmp.getContext('2d'), W, H);
+  return tmp.getContext('2d').getImageData(0, 0, W, H);
+}
+
+function loadUserImage(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImg = img;
+      applyAll();
+      setupGameCanvases();
+      nextQuestion();
+      updateBA();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('aug-hint').textContent = `Loaded: ${file.name}`;
+}
+
+/* ── Transform engine ── */
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+
+function applyTransforms(src, transforms) {
+  const tmp = document.createElement('canvas'); tmp.width=W; tmp.height=H;
+  const ctx = tmp.getContext('2d');
+  if (src instanceof ImageData) ctx.putImageData(src,0,0);
+  else { ctx.drawImage(src,0,0,W,H); }
+  const applied = [];
+
+  const flip   = parseFloat(document.getElementById('s-flip'  ?.id||'_')?.value||0.5);
+  const bright = parseFloat(document.getElementById('s-bright').value);
+  const sat    = parseFloat(document.getElementById('s-sat').value);
+  const rot    = parseFloat(document.getElementById('s-rot').value);
+  const crop   = parseInt(document.getElementById('s-crop').value);
+  const blurR  = parseFloat(document.getElementById('s-blur').value);
+  const mixupL = parseFloat(document.getElementById('s-mixup').value);
+
+  transforms.forEach(t => {
+    if (t==='flip'   && augState.flip   && Math.random()<0.5){ flipH(ctx,W,H); applied.push('flip'); }
+    if (t==='vflip'  && augState.vflip  && Math.random()<0.3){ flipV(ctx,W,H); applied.push('v-flip'); }
+    if (t==='crop'   && augState.crop   && crop>0 && Math.random()<0.8){ doCrop(ctx,W,H,crop); applied.push(`crop±${crop}`); }
+    if (t==='jitter' && augState.jitter && (bright>0||sat>0)){ doJitter(ctx,W,H,bright,sat); applied.push('jitter'); }
+    if (t==='rot'    && augState.rot    && rot>0 && Math.random()<0.7){ doRotate(ctx,W,H,(Math.random()*2-1)*rot); applied.push(`rot`); }
+    if (t==='blur'   && augState.blur   && blurR>0.5 && Math.random()<0.5){ doBlur(ctx,W,H,blurR); applied.push('blur'); }
+    if (t==='erase'  && augState.erase  && Math.random()<0.6){ doErase(ctx,W,H); applied.push('erase'); }
+    if (t==='mixup'  && augState.mixup  && Math.random()<0.6){ doMixup(ctx,W,H,mixupL); applied.push(`mixup`); }
+  });
+  return { imageData: ctx.getImageData(0,0,W,H), applied };
+}
+
+function flipH(ctx,w,h){ const d=ctx.getImageData(0,0,w,h); const p=d.data; for(let y=0;y<h;y++) for(let x=0;x<w/2;x++){ const a=(y*w+x)*4,b=(y*w+(w-1-x))*4; [0,1,2,3].forEach(c=>{const t=p[a+c];p[a+c]=p[b+c];p[b+c]=t;}); } ctx.putImageData(d,0,0); }
+function flipV(ctx,w,h){ const d=ctx.getImageData(0,0,w,h); const p=d.data; for(let y=0;y<h/2;y++) for(let x=0;x<w;x++){ const a=(y*w+x)*4,b=((h-1-y)*w+x)*4; [0,1,2,3].forEach(c=>{const t=p[a+c];p[a+c]=p[b+c];p[b+c]=t;}); } ctx.putImageData(d,0,0); }
+function doCrop(ctx,w,h,pad){ const ox=Math.floor(Math.random()*pad*2-pad),oy=Math.floor(Math.random()*pad*2-pad); const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;const tc=tmp.getContext('2d');tc.drawImage(ctx.canvas,0,0);ctx.clearRect(0,0,w,h);ctx.drawImage(tmp,ox,oy,w,h,0,0,w,h); }
+function doJitter(ctx,w,h,bright,sat){ const img=ctx.getImageData(0,0,w,h);const d=img.data;const bf=1+(Math.random()*2-1)*bright;const sf=1+(Math.random()*2-1)*sat;for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];const gr=.299*r+.587*g+.114*b;d[i]=clamp((gr+(r-gr)*sf)*bf,0,255);d[i+1]=clamp((gr+(g-gr)*sf)*bf,0,255);d[i+2]=clamp((gr+(b-gr)*sf)*bf,0,255);}ctx.putImageData(img,0,0); }
+function doRotate(ctx,w,h,angle){ const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;tmp.getContext('2d').drawImage(ctx.canvas,0,0);ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2,h/2);ctx.rotate(angle*Math.PI/180);ctx.drawImage(tmp,-w/2,-h/2);ctx.restore(); }
+function doBlur(ctx,w,h,r){ const src=new Uint8ClampedArray(ctx.getImageData(0,0,w,h).data);const img=ctx.getImageData(0,0,w,h);const dst=img.data;const rad=Math.max(1,Math.round(r));const kern=[];for(let ky=-rad;ky<=rad;ky++)for(let kx=-rad;kx<=rad;kx++)kern.push([kx,ky]);const kl=kern.length;for(let y=rad;y<h-rad;y++)for(let x=rad;x<w-rad;x++){let R=0,G=0,B=0;kern.forEach(([kx,ky])=>{const i=((y+ky)*w+(x+kx))*4;R+=src[i];G+=src[i+1];B+=src[i+2];});const i=(y*w+x)*4;dst[i]=R/kl;dst[i+1]=G/kl;dst[i+2]=B/kl;}ctx.putImageData(img,0,0); }
+function doErase(ctx,w,h){ const ew=20+Math.floor(Math.random()*50),eh=20+Math.floor(Math.random()*50);const ex=Math.floor(Math.random()*(w-ew)),ey=Math.floor(Math.random()*(h-eh));ctx.fillStyle=`hsl(${Math.random()*360},20%,50%)`;ctx.fillRect(ex,ey,ew,eh); }
+function doMixup(ctx,w,h,lam){
+  // blend with a hue-shifted copy of the source
+  const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+  drawSource(tmp.getContext('2d'),w,h);
+  // tint the blend layer so it's visually distinct
+  const tCtx=tmp.getContext('2d');
+  tCtx.globalCompositeOperation='hue'; tCtx.fillStyle='#d946ef'; tCtx.fillRect(0,0,w,h);
+  tCtx.globalCompositeOperation='source-over';
+  ctx.globalAlpha=1-lam; ctx.drawImage(tmp,0,0); ctx.globalAlpha=1;
+}
+
+/* ── Render helpers ── */
+function drawToCanvas(id, imgData, label, transforms) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  c.width=W; c.height=H;
+  c.getContext('2d').putImageData(imgData,0,0);
+  if (label!==undefined) document.getElementById(label).textContent = transforms.length ? transforms.join(', ') : 'none applied';
+}
+
+const ALL_T = ['flip','vflip','crop','jitter','rot','blur','erase','mixup'];
+
+function applyAll() {
+  const origData = getSourceImageData();
+  // Draw original
+  const c0 = document.getElementById('c0'); c0.width=W; c0.height=H;
+  drawSource(c0.getContext('2d'), W, H);
+  document.getElementById('t0').textContent = 'Original image';
+
+  if (currentMode==='multi') {
+    [1,2,3].forEach(i => {
+      const {imageData, applied} = applyTransforms(origData, [...ALL_T].sort(()=>Math.random()-.5));
+      drawToCanvas(`c${i}`, imageData, `t${i}`, applied);
+    });
+  }
+  if (currentMode==='ba') updateBA();
+
+  document.getElementById('aug-hint').textContent = `✓ Augmented! Each sample uses different random values.`;
+}
+
+/* ══ BEFORE/AFTER ══ */
+let baActive=false;
+function updateBA() {
+  const origData = getSourceImageData();
+  const bc = document.getElementById('ba-canvas-before'); bc.width=280; bc.height=280;
+  const bCtx = bc.getContext('2d');
+  const tmpBA = document.createElement('canvas'); tmpBA.width=W; tmpBA.height=H;
+  drawSource(tmpBA.getContext('2d'), W, H);
+  bCtx.drawImage(tmpBA, 0, 0, 280, 280);
+
+  const ac = document.getElementById('ba-canvas-after'); ac.width=280; ac.height=280;
+  const aCtx = ac.getContext('2d');
+  const tmp = document.createElement('canvas'); tmp.width=W; tmp.height=H;
+  const tCtx = tmp.getContext('2d'); tCtx.putImageData(origData,0,0);
+  const applied = applyTransforms(origData,[baTransform]).applied;
+  aCtx.drawImage(tmp,0,0,280,280);
+}
+function setBaTransform(t, el) {
+  baTransform=t;
+  document.querySelectorAll('.ba-opt').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  updateBA();
+}
+
+// Drag before/after divider
+const baDiv = document.getElementById('ba-divider');
+const baWrap= document.getElementById('ba-wrap');
+baDiv.addEventListener('mousedown', e => { baActive=true; e.preventDefault(); });
+document.addEventListener('mousemove', e => {
+  if (!baActive) return;
+  const rect=baWrap.getBoundingClientRect();
+  const x=clamp(e.clientX-rect.left,0,280);
+  baPos=x; baDiv.style.left=x+'px';
+  document.getElementById('ba-canvas-after').style.clipPath=`inset(0 ${280-x}px 0 0)`;
+});
+document.addEventListener('mouseup',()=>{ baActive=false; });
+baWrap.addEventListener('touchmove',e=>{
+  const rect=baWrap.getBoundingClientRect();
+  const x=clamp(e.touches[0].clientX-rect.left,0,280);
+  baDiv.style.left=x+'px';
+  document.getElementById('ba-canvas-after').style.clipPath=`inset(0 ${280-x}px 0 0)`;
+},{passive:true});
+
+/* ══ MODES & LIVE ══ */
+function setMode(m) {
+  currentMode=m;
+  document.getElementById('view-multi').style.display = m==='multi'?'block':'none';
+  document.getElementById('view-ba').style.display    = m==='ba'   ?'flex':'none';
+  document.getElementById('tab-multi').classList.toggle('active',m==='multi');
+  document.getElementById('tab-ba').classList.toggle('active',m==='ba');
+  applyAll();
+}
+function toggleLive() {
+  liveMode=!liveMode;
+  const b=document.getElementById('btn-live');
+  b.textContent=liveMode?'⚡ Live':'⚡ Live';
+  b.className='btn-live '+(liveMode?'on':'off');
+}
+function toggleAug(k) {
+  augState[k]=!augState[k];
+  document.getElementById(`atg-${k}`).classList.toggle('on',augState[k]);
+  if(liveMode) applyAll();
+}
+function onSlider(k) {
+  const el=document.getElementById('s-'+k); if(!el)return;
+  const step=parseFloat(el.step);
+  document.getElementById('v-'+k).textContent=parseFloat(el.value).toFixed(step<1?(step<0.1?2:1):0);
+  if(liveMode) { clearTimeout(window._liveTimer); window._liveTimer=setTimeout(applyAll,120); }
+}
+
+/* ══ RANDOMISE ══ */
+/* ══ RESET FUNCTIONS ══ */
+function resetDemo() {
+  // Restore default slider values
+  const defaults = { bright:'0.35', sat:'0.4', rot:'20', crop:'12', blur:'1.5', mixup:'0.4' };
+  Object.entries(defaults).forEach(([k,v]) => {
+    const el = document.getElementById('s-'+k); if (el) { el.value = v; onSlider(k); }
+  });
+  // Restore default toggle states
+  const defaultToggles = { flip:true, crop:true, jitter:true, rot:true, blur:true, erase:false, mixup:false, vflip:true };
+  Object.entries(defaultToggles).forEach(([k,v]) => {
+    augState[k] = v;
+    const btn = document.getElementById('atg-'+k);
+    if (btn) btn.classList.toggle('on', v);
+  });
+  // Reload source and redraw all canvases
+  loadDefaultCat();
+  document.getElementById('aug-hint').textContent = 'Reset to defaults — cat image reloaded';
+}
+
+function resetGame() {
+  gameScore = 0; gameTotal = 0;
+  document.getElementById('game-score').textContent = '0';
+  document.getElementById('game-total').textContent = '0';
+  document.getElementById('game-feedback').textContent = '';
+  document.getElementById('btn-next-q').classList.remove('visible');
+  nextQuestion();
+}
+
+function randomiseAll() {
+  ['bright','sat','rot','crop','blur','mixup'].forEach(k=>{
+    const el=document.getElementById('s-'+k); if(!el)return;
+    el.value=(parseFloat(el.min)+Math.random()*(parseFloat(el.max)-parseFloat(el.min))).toFixed(2);
+    onSlider(k);
+  });
+  Object.keys(augState).forEach(k=>{augState[k]=Math.random()>0.35;document.getElementById(`atg-${k}`).classList.toggle('on',augState[k]);});
+  applyAll();
+}
+
+/* ══ ACCURACY BAR ANIMATION ══ */
+function animateBars() {
+  const bars=[['bar-no-cifar',77],['bar-no-img',68],['bar-no-tiny',55],['bar-aug-cifar',95],['bar-aug-img',80],['bar-aug-tiny',78]];
+  bars.forEach(([id,v])=>{ const el=document.getElementById(id); if(el) setTimeout(()=>el.style.width=v+'%',200+Math.random()*300); });
+}
+
+/* ══ GUESS THE TRANSFORM GAME ══ */
+const GAME_TRANSFORMS = [
+  { name:'Horizontal Flip', apply:(ctx,w,h)=>flipH(ctx,w,h), hint:'The image is mirrored left-right' },
+  { name:'Vertical Flip',   apply:(ctx,w,h)=>flipV(ctx,w,h), hint:'The image is mirrored top-bottom' },
+  { name:'Colour Jitter',   apply:(ctx,w,h)=>doJitter(ctx,w,h,.5,.6), hint:'Brightness/saturation changed' },
+  { name:'Rotation',        apply:(ctx,w,h)=>doRotate(ctx,w,h,25+Math.random()*20), hint:'Rotated by 25-45 degrees' },
+  { name:'Gaussian Blur',   apply:(ctx,w,h)=>doBlur(ctx,w,h,2.5), hint:'Image was smoothed/blurred' },
+  { name:'Random Erase',    apply:(ctx,w,h)=>doErase(ctx,w,h), hint:'A rectangle was filled/erased' },
+  { name:'Random Crop',     apply:(ctx,w,h)=>doCrop(ctx,w,h,20), hint:'Cropped then rescaled' },
+  { name:'MixUp',           apply:(ctx,w,h)=>doMixup(ctx,w,h,.4), hint:'Blended with another image' },
+];
+let gameScore=0, gameTotal=0, correctAnswer='';
+
+function setupGameCanvases() {
+  const gO=document.getElementById('game-orig'); gO.width=200; gO.height=200;
+  const gA=document.getElementById('game-aug');  gA.width=200; gA.height=200;
+  const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H;
+  drawSource(tmp.getContext('2d'),W,H);
+  gO.getContext('2d').drawImage(tmp,0,0,200,200);
+  gA.getContext('2d').drawImage(tmp,0,0,200,200);
+}
+
+function nextQuestion() {
+  const W2=200,H2=200;
+  // Pick correct transform
+  const correct = GAME_TRANSFORMS[Math.floor(Math.random()*GAME_TRANSFORMS.length)];
+  correctAnswer = correct.name;
+
+  // Draw original
+  const origC = document.getElementById('game-orig'); origC.width=W2; origC.height=W2;
+  const tmpOrig=document.createElement('canvas'); tmpOrig.width=W; tmpOrig.height=H;
+  drawSource(tmpOrig.getContext('2d'),W,H);
+  origC.getContext('2d').drawImage(tmpOrig,0,0,W2,W2);
+
+  // Draw augmented
+  const augC = document.getElementById('game-aug'); augC.width=W2; augC.height=W2;
+  augC.getContext('2d').drawImage(tmpOrig,0,0,W2,W2);
+  correct.apply(augC.getContext('2d'),W2,W2);
+
+  // Pick 3 random wrong answers
+  const wrongs = GAME_TRANSFORMS.filter(t=>t.name!==correct.name)
+    .sort(()=>Math.random()-.5).slice(0,3);
+  const options = [correct,...wrongs].sort(()=>Math.random()-.5);
+
+  // Render option buttons
+  const optsDiv = document.getElementById('game-options');
+  optsDiv.innerHTML='';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className='game-opt'; btn.textContent=opt.name;
+    btn.addEventListener('click', () => {
+      const isRight = opt.name===correct.name;
+      if(isRight) gameScore++;
+      gameTotal++;
+      document.getElementById('game-score').textContent=gameScore;
+      document.getElementById('game-total').textContent=gameTotal;
+      document.querySelectorAll('.game-opt').forEach(b=>{
+        b.disabled=true;
+        if(b.textContent===correct.name) b.classList.add('correct');
+        else if(b===btn&&!isRight) b.classList.add('wrong');
+      });
+      document.getElementById('game-feedback').textContent =
+        isRight ? `✅ Correct! ${correct.hint}.` : `❌ It was ${correct.name}. ${correct.hint}.`;
+      document.getElementById('btn-next-q').classList.add('visible');
+    });
+    optsDiv.appendChild(btn);
+  });
+  document.getElementById('game-feedback').textContent='';
+  document.getElementById('btn-next-q').classList.remove('visible');
+}
+
+/* ══ FLIP CARDS ══ */
+const FLIP_DATA = [
+  { icon:'↔', name:'Horizontal Flip', hint:'Tap to learn', back:'Mirrors the image left-right with 50% probability. Free regularisation for almost every natural image task.', formula:'p(flip) = 0.5' },
+  { icon:'✂️', name:'Random Crop', hint:'Tap to learn', back:'Pad image by N pixels then randomly crop back to original size. Forces position invariance.', formula:'pad → random crop(H,W)' },
+  { icon:'🌈', name:'Colour Jitter', hint:'Tap to learn', back:'Randomly vary brightness, contrast, saturation, hue. Teaches the model to ignore illumination differences.', formula:'x = clip(x · b · c · s + h)' },
+  { icon:'🔄', name:'Rotation', hint:'Tap to learn', back:'Rotate by ±θ degrees. Essential for satellite/microscopy images where orientation is arbitrary.', formula:'x\' = R(θ) · x' },
+  { icon:'⬛', name:'CutOut / Erase', hint:'Tap to learn', back:'Randomly zero out a rectangular patch. Prevents the model from relying on any single region.', formula:'x[r₁:r₂, c₁:c₂] = 0' },
+  { icon:'🔀', name:'MixUp', hint:'Tap to learn', back:'Linear blend of two images and their labels. Creates soft labels, drastically reduces over-confidence.', formula:'x̃ = λxᵢ + (1−λ)xⱼ' },
+  { icon:'🟦', name:'CutMix', hint:'Tap to learn', back:'Paste a crop from one image into another, mixing labels by area. Stronger than CutOut.', formula:'ỹ = λyᵢ + (1−λ)yⱼ' },
+  { icon:'🎲', name:'RandAugment', hint:'Tap to learn', back:'Samples N random transforms from a policy at magnitude M. No manual tuning — default in EfficientNet.', formula:'policy(N=2, M=9)' },
+  { icon:'📸', name:'Gaussian Blur', hint:'Tap to learn', back:'Apply random-radius Gaussian blur. Simulates out-of-focus capture, prevents texture over-reliance.', formula:'G(x,y) = e^(-(x²+y²)/2σ²)' },
+];
+
+function buildFlipCards() {
+  const grid=document.getElementById('flip-grid');
+  FLIP_DATA.forEach(f=>{
+    const div=document.createElement('div'); div.className='flip-card';
+    div.innerHTML=`<div class="flip-inner"><div class="flip-front"><div class="flip-icon">${f.icon}</div><div class="flip-name">${f.name}</div><div class="flip-hint">${f.hint}</div></div><div class="flip-back"><div class="flip-back-title">${f.name}</div><div class="flip-back-body">${f.back}</div><div class="flip-back-formula">${f.formula}</div></div></div>`;
+    div.addEventListener('click',()=>div.classList.toggle('flipped'));
+    grid.appendChild(div);
+  });
+}
+
+/* ══ ACCORDION ══ */
+function toggleAccordion(id) {
+  const body=document.getElementById('body-'+id);
+  const btn =document.getElementById('acc-'+id+'-btn');
+  const open=body.classList.toggle('open');
+  btn.classList.toggle('open',open);
+}
+
+/* ══ NAV DOTS ══ */
+const SECS=['sec-1','sec-2','sec-3','sec-4','sec-5'];
+function getCurrentSection(){let c=0;SECS.forEach((id,i)=>{const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<window.innerHeight*.55)c=i;});return c;}
+function updateNavDots(){const c=getCurrentSection();document.querySelectorAll('.dot').forEach((d,i)=>{d.classList.toggle('active',i===c);d.classList.toggle('done',i<c);});}
+document.querySelectorAll('.dot').forEach((d,i)=>d.addEventListener('click',()=>document.getElementById(SECS[i])?.scrollIntoView({behavior:'smooth'})));
+window.addEventListener('scroll',updateNavDots,{passive:true});
+
+/* ══ SCROLL REVEAL + BAR TRIGGER ══ */
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+  if(e.isIntersecting){ e.target.classList.add('visible'); if(e.target.id==='sec-1')animateBars(); }
+}),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+/* ══ INIT ══ */
+window.addEventListener('load',()=>{
+  buildFlipCards();
+  loadDefaultCat();   // chains: applyAll + setupGameCanvases + nextQuestion + updateBA
+});
+window.addEventListener('resize', applyAll);
+</script>
+</body>
+</html>

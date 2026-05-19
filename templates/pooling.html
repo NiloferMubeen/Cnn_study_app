@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pooling — CNN Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #ffffff;
+      --bg2:       #edf5fc;
+      --white:     #ffffff;
+      --border:    #d8eaf6;
+      --border2:   #bdd8ee;
+
+      /* Primary — Sky Blue */
+      --sky:       #0EA5E9;
+      --sky-lt:    #e0f2fe;
+      --sky-md:    #7dd3fc;
+      --sky-dark:  #0369a1;
+
+      /* Secondary — Teal */
+      --teal:      #0d9488;
+      --teal-lt:   #ccfbf1;
+      --teal-md:   #5eead4;
+
+      /* Accent — Violet */
+      --violet:    #7c3aed;
+      --violet-lt: #ede9fb;
+
+      /* Status */
+      --green:     #059669;
+      --green-lt:  #d1fae5;
+      --amber:     #d97706;
+      --amber-lt:  #fef3c7;
+      --coral:     #e11d48;
+      --coral-lt:  #ffe4e6;
+
+      --text:      #0c1a2e;
+      --text-2:    #3d5a73;
+      --text-3:    #8fafc7;
+
+      --mono: 'DM Mono', monospace;
+      --display: 'Fraunces', serif;
+      --sans: 'Plus Jakarta Sans', sans-serif;
+
+      --shadow-sm: 0 1px 3px rgba(14,165,233,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(14,165,233,0.1), 0 1px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 12px 40px rgba(14,165,233,0.12), 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; top: -200px; right: -200px;
+      width: 640px; height: 640px;
+      background: radial-gradient(circle, rgba(14,165,233,0.08) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed; bottom: -200px; left: -100px;
+      width: 520px; height: 520px;
+      background: radial-gradient(circle, rgba(13,148,136,0.06) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ═══ NAV ═══ */
+    nav {
+      position: sticky; top: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 36px;
+      background: rgba(246,250,254,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1.5px solid var(--border);
+      z-index: 100;
+    }
+    .nav-left { display: flex; align-items: center; gap: 14px; }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      text-decoration: none; color: var(--text-2);
+      font-size: 0.8rem; font-family: var(--mono);
+      padding: 6px 14px;
+      border: 1.5px solid var(--border2); border-radius: 8px;
+      background: var(--white); transition: all .2s;
+      box-shadow: var(--shadow-sm);
+    }
+    .back-btn:hover { border-color: var(--sky); color: var(--sky); }
+    .nav-badge {
+      font-family: var(--mono); font-size: 0.68rem;
+      padding: 4px 10px;
+      background: var(--sky-lt); color: var(--sky);
+      border: 1.5px solid var(--sky-md); border-radius: 20px;
+      font-weight: 500; letter-spacing: .06em;
+    }
+    .progress-dots { display: flex; gap: 6px; align-items: center; }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--bg2); border: 1.5px solid var(--border2);
+      cursor: pointer; transition: all .2s;
+    }
+    .dot:hover { border-color: var(--sky); }
+    .dot.active { background: var(--sky); border-color: var(--sky); box-shadow: 0 0 0 3px var(--sky-lt); }
+    .dot.done   { background: var(--sky-lt); border-color: var(--sky); }
+
+    /* ═══ PAGE LAYOUT ═══ */
+    .page-layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      align-items: start;
+      gap: 0;
+      padding: 0 32px 0 0;
+    }
+    .main-col { min-width: 0; }
+    .sidebar-col {
+      position: sticky; top: 128px;
+      padding: 32px 0 32px 28px;
+      display: flex; flex-direction: column; gap: 16px;
+      z-index: 10;
+    }
+    @media (max-width: 900px) {
+      .page-layout { grid-template-columns: 1fr; padding-right: 0; }
+      .sidebar-col { display: none; }
+    }
+
+    /* ═══ HERO ═══ */
+    .hero {
+      position: relative;
+      padding: 64px 56px 48px; z-index: 1;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 0.72rem; color: var(--sky);
+      background: var(--sky-lt); border: 1.5px solid var(--sky-md);
+      padding: 5px 12px; border-radius: 20px;
+      margin-bottom: 20px; letter-spacing: .06em;
+    }
+    .hero h1 {
+      font-family: var(--display);
+      font-size: clamp(2.4rem, 5.5vw, 4rem);
+      font-weight: 900; letter-spacing: -0.03em; line-height: 1.05;
+      color: var(--text); margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--sky); font-style: italic; }
+    .hero p { font-size: 1.05rem; color: var(--text-2); max-width: 520px; line-height: 1.75; }
+    .hero-accent-line {
+      width: 64px; height: 5px;
+      background: linear-gradient(90deg, var(--sky) 0%, var(--teal) 100%);
+      border-radius: 3px; margin-bottom: 20px;
+    }
+
+    /* ═══ SECTIONS ═══ */
+    .section {
+      position: relative;
+      margin: 0 0 60px; padding: 0 56px; z-index: 1;
+    }
+    .section-header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+    .section-num {
+      font-family: var(--mono); font-size: 0.65rem; font-weight: 500;
+      color: var(--white); background: var(--sky);
+      padding: 4px 9px; border-radius: 6px;
+      letter-spacing: .08em; flex-shrink: 0;
+    }
+    .section h2 {
+      font-family: var(--display); font-size: 1.5rem;
+      font-weight: 700; letter-spacing: -0.02em; color: var(--text);
+    }
+
+    /* ═══ CARDS ═══ */
+    .card {
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: 16px; padding: 28px 32px;
+      margin-bottom: 16px; box-shadow: var(--shadow-sm);
+    }
+    .card p { color: var(--text-2); line-height: 1.8; font-size: 0.95rem; }
+    .card p + p { margin-top: 12px; }
+
+    .hl      { font-weight: 700; color: var(--sky);   background: var(--sky-lt);   padding: 1px 6px; border-radius: 4px; }
+    .hl-teal { font-weight: 700; color: var(--teal);  background: var(--teal-lt);  padding: 1px 6px; border-radius: 4px; }
+    .hl-amb  { font-weight: 700; color: var(--amber); background: var(--amber-lt); padding: 1px 6px; border-radius: 4px; }
+
+    .analogy {
+      background: linear-gradient(135deg, #fffbeb, #fef9c3);
+      border: 1.5px solid #fde68a; border-left: 4px solid var(--amber);
+      border-radius: 12px; padding: 18px 22px; margin-top: 18px;
+    }
+    .analogy-label { font-family: var(--mono); font-size: 0.65rem; color: var(--amber); font-weight: 500; letter-spacing: .1em; margin-bottom: 8px; }
+    .analogy p { font-size: 0.9rem; color: #92400e; }
+
+    .formula {
+      font-family: var(--mono); background: var(--text); color: #7dd3fc;
+      border-radius: 12px; padding: 18px 24px; font-size: 0.88rem;
+      text-align: center; margin-top: 16px; letter-spacing: .04em;
+      box-shadow: var(--shadow-md);
+    }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+    .mini-card { background: var(--bg2); border: 1.5px solid var(--border); border-radius: 12px; padding: 20px; }
+    .mini-card-title { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; color: var(--sky); margin-bottom: 8px; letter-spacing: .05em; }
+    .mini-card p { font-size: 0.87rem; color: var(--text-2); line-height: 1.65; }
+
+    /* ═══ POOL TYPE CARDS ═══ */
+    .pool-types { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
+    .pt-card {
+      flex: 1; min-width: 180px;
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: 16px; padding: 22px 20px;
+      box-shadow: var(--shadow-sm); transition: box-shadow .2s, transform .2s;
+    }
+    .pt-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .pt-icon { font-size: 1.8rem; margin-bottom: 10px; }
+    .pt-name { font-weight: 800; font-size: 0.92rem; margin-bottom: 4px; color: var(--text); font-family: var(--display); }
+    .pt-tag {
+      display: inline-block; font-family: var(--mono); font-size: 0.62rem;
+      padding: 2px 8px; border-radius: 20px; margin-bottom: 10px;
+    }
+    .pt-desc { font-size: 0.83rem; color: var(--text-2); line-height: 1.6; }
+
+    /* 2×2 pool window preview inside pt-card */
+    .pt-grid { display: inline-grid; grid-template-columns: repeat(4,28px); gap: 3px; margin-top: 14px; }
+    .pt-cell {
+      width: 28px; height: 28px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 0.6rem; font-weight: 600;
+      border: 1.5px solid transparent;
+    }
+
+    /* ═══ INTERACTIVE DEMO ═══ */
+    .demo-wrapper {
+      background: var(--white); border: 2px solid var(--border);
+      border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-lg);
+    }
+    .demo-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; background: var(--text); flex-wrap: wrap; gap: 12px;
+    }
+    .demo-title { font-family: var(--mono); font-size: 0.75rem; color: #7dd3fc; letter-spacing: .1em; }
+    .demo-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .ctrl-group { display: flex; align-items: center; gap: 6px; }
+    .ctrl-label { font-family: var(--mono); font-size: 0.65rem; color: #78716c; text-transform: uppercase; letter-spacing: .08em; }
+    select {
+      font-family: var(--mono); font-size: 0.72rem;
+      background: #1e2d3d; border: 1px solid #2e4258; color: #cbd5e1;
+      border-radius: 6px; padding: 5px 10px; cursor: pointer; outline: none; transition: border-color .2s;
+    }
+    select:hover { border-color: var(--sky-md); }
+
+    /* demo body — 3 column: input | arrow | output */
+    .demo-body {
+      display: grid; grid-template-columns: 1fr 56px 1fr;
+      align-items: center; padding: 36px 48px; background: var(--bg);
+    }
+    @media (max-width: 700px) { .demo-body { grid-template-columns: 1fr; gap: 24px; } }
+
+    .grid-section { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .grid-label {
+      font-family: var(--mono); font-size: 0.68rem; font-weight: 500;
+      color: var(--text-2); text-transform: uppercase; letter-spacing: .1em;
+      background: var(--bg2); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);
+    }
+
+    /* input cells */
+    #input-grid { display: inline-grid; gap: 5px; }
+    .cell {
+      width: 58px; height: 58px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-family: var(--mono); font-size: 0.85rem;
+      font-weight: 600; border: 2px solid transparent; transition: all 0.25s ease;
+    }
+    .cell.normal   { background: var(--white); color: var(--text-2); border-color: var(--border); box-shadow: var(--shadow-sm); }
+    .cell.active   { background: var(--sky); color: #fff; border-color: var(--sky-dark); box-shadow: 0 4px 16px rgba(14,165,233,0.45); transform: scale(1.06); }
+    .cell.is-max   { background: #0c4a6e; color: #fff; border-color: var(--sky); box-shadow: 0 4px 16px rgba(14,165,233,0.55); transform: scale(1.1); }
+    .cell.done-cell{ background: var(--teal-lt); color: var(--teal); border-color: var(--teal-md); }
+
+    /* output cells */
+    #output-grid { display: inline-grid; gap: 5px; }
+    .out-cell {
+      width: 58px; height: 58px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-family: var(--mono); font-size: 0.88rem; font-weight: 700;
+      border: 2px dashed var(--border); background: var(--bg2); color: transparent; transition: all 0.3s ease;
+    }
+    .out-cell.filled  { background: var(--teal-lt); color: var(--teal); border: 2px solid var(--teal-md); box-shadow: var(--shadow-sm); }
+    .out-cell.current { background: var(--amber-lt); color: var(--amber); border: 2px solid #fcd34d; box-shadow: 0 4px 14px rgba(217,119,6,0.3); transform: scale(1.08); }
+
+    /* arrow */
+    .demo-arrow { display: flex; flex-direction: row; align-items: center; justify-content: center; }
+    .arrow-body { width: 28px; height: 2px; background: linear-gradient(to right, var(--sky), var(--teal)); }
+    .arrow-tip  { color: var(--teal); font-size: 1rem; line-height: 1; }
+
+    /* computation panel */
+    .computation-panel {
+      margin: 0 24px 24px; background: var(--white); border: 2px solid var(--border);
+      border-radius: 14px; padding: 20px 24px; min-height: 120px; box-shadow: var(--shadow-sm);
+    }
+    .comp-label { font-family: var(--mono); font-size: 0.65rem; font-weight: 500; color: var(--sky); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
+    .comp-equation { font-family: var(--mono); font-size: 0.84rem; color: var(--text-2); line-height: 2; word-break: break-word; }
+    .val-v   { color: var(--sky);   font-weight: 600; }
+    .val-max { color: #0c4a6e;     font-weight: 800; background: var(--sky-lt); padding: 1px 5px; border-radius: 4px; }
+    .val-avg { color: var(--teal); font-weight: 800; }
+    .val-r   { color: var(--amber); font-weight: 800; font-size: 1.05rem; }
+
+    /* demo footer */
+    .demo-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; border-top: 1.5px solid var(--border);
+      background: var(--bg2); flex-wrap: wrap; gap: 12px;
+    }
+    .step-info { display: flex; flex-direction: column; gap: 3px; }
+    .step-count { font-family: var(--mono); font-size: 0.85rem; color: var(--text); font-weight: 500; }
+    .step-hint  { font-size: 0.72rem; color: var(--text-3); }
+    .step-progress { width: 160px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+    .step-bar { height: 100%; background: linear-gradient(90deg, var(--sky), var(--teal)); border-radius: 3px; transition: width .3s ease; }
+
+    .btn-group { display: flex; gap: 10px; }
+    .btn-main { font-family: var(--mono); font-size: 0.78rem; font-weight: 500; padding: 10px 22px; border-radius: 10px; border: none; cursor: pointer; transition: all .2s; }
+    .btn-next { background: var(--sky); color: #fff; box-shadow: 0 4px 16px rgba(14,165,233,0.35); }
+    .btn-next:hover { background: var(--sky-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(14,165,233,0.45); }
+    .btn-next:active { transform: translateY(0); }
+    .btn-next:disabled { background: var(--bg2); color: var(--text-3); box-shadow: none; cursor: not-allowed; transform: none; }
+    .btn-reset { background: var(--white); color: var(--text-2); border: 1.5px solid var(--border2); box-shadow: var(--shadow-sm); }
+    .btn-reset:hover { border-color: var(--sky); color: var(--sky); }
+
+    /* ═══ COMPARISON GRID (max vs avg) ═══ */
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 600px) { .compare-grid { grid-template-columns: 1fr; } }
+    .cmp-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow-sm); }
+    .cmp-title { font-weight: 800; font-size: 0.9rem; margin-bottom: 6px; font-family: var(--display); }
+    .cmp-tag { font-family: var(--mono); font-size: 0.62rem; padding: 2px 8px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
+    .cmp-card p { font-size: 0.84rem; color: var(--text-2); line-height: 1.65; }
+    .cmp-viz { display: inline-grid; grid-template-columns: repeat(2,36px); gap: 4px; margin-top: 14px; }
+    .cmp-cell { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 0.7rem; font-weight: 700; border: 1.5px solid transparent; }
+
+    /* ═══ SIZE FORMULA ═══ */
+    .formula-box { background: var(--text); border-radius: 14px; padding: 22px 28px; margin-top: 16px; box-shadow: var(--shadow-md); }
+    .formula-box .comp-label { color: #7dd3fc; }
+    .formula-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .formula-row:last-child { margin-bottom: 0; }
+    .f-label { font-family: var(--mono); font-size: 0.7rem; color: #8fafc7; width: 150px; flex-shrink: 0; }
+    .f-val { font-family: var(--mono); font-size: 0.88rem; color: #7dd3fc; background: rgba(125,211,252,0.1); padding: 5px 14px; border-radius: 6px; border: 1px solid rgba(125,211,252,0.2); }
+
+    /* ═══ GAP / GLOBAL POOL VISUAL ═══ */
+    .gap-visual {
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 24px 28px; box-shadow: var(--shadow-sm);
+      display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 16px;
+    }
+    .gap-maps { display: flex; gap: 8px; }
+    .gap-map { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .gap-grid { display: grid; grid-template-columns: repeat(4,18px); gap: 2px; }
+    .gap-cell { width: 18px; height: 18px; border-radius: 3px; }
+    .gap-label { font-family: var(--mono); font-size: 0.58rem; color: var(--text-3); }
+    .gap-arrow { font-size: 1.2rem; color: var(--sky); }
+    .gap-vec { display: flex; flex-direction: column; gap: 3px; }
+    .gap-val { width: 52px; height: 16px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 0.6rem; font-weight: 600; }
+
+    /* ═══ REVEAL ═══ */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity .55s ease, transform .55s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ═══ SIDEBAR ═══ */
+    .sb-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow-sm); }
+    .sb-label { font-family: var(--mono); font-size: 0.62rem; font-weight: 500; color: var(--sky); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 14px; }
+    .mod-list { display: flex; flex-direction: column; gap: 8px; }
+    .mod-item { display: flex; align-items: center; gap: 10px; }
+    .mod-check { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.6rem; border: 1.5px solid var(--border2); background: var(--bg2); }
+    .mod-check.done   { background: var(--green);  border-color: var(--green);  color: #fff; }
+    .mod-check.active { background: var(--sky);    border-color: var(--sky);    color: #fff; }
+    .mod-check.locked { background: var(--bg2);    border-color: var(--border); }
+    .mod-name { font-size: 0.82rem; color: var(--text-3); line-height: 1.3; }
+    .mod-name.done   { color: var(--text-2); font-weight: 500; }
+    .mod-name.active { color: var(--sky);    font-weight: 700; }
+    .sb-progress-row { margin-top: 14px; }
+    .sb-progress-label { font-size: 0.7rem; color: var(--text-3); margin-bottom: 6px; font-family: var(--mono); }
+    .sb-progress-track { height: 6px; background: var(--bg2); border-radius: 3px; overflow: hidden; }
+    .sb-progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #34d399); border-radius: 3px; transition: width .4s ease; }
+    .term-list { display: flex; flex-direction: column; gap: 8px; }
+    .term-item { background: var(--bg2); border-radius: 8px; padding: 9px 12px; }
+    .term-name { font-size: 0.75rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .term-desc { font-size: 0.7rem; color: var(--text-3); line-height: 1.5; }
+    .sb-nav { display: flex; gap: 8px; }
+    .sb-nav a { flex: 1; display: flex; align-items: center; justify-content: center; text-decoration: none; padding: 10px; border-radius: 10px; font-family: var(--mono); font-size: 0.72rem; font-weight: 500; transition: all .2s; }
+    .sb-nav-prev { background: var(--white); color: var(--text-2); border: 1.5px solid var(--border2); }
+    .sb-nav-prev:hover { border-color: var(--sky); color: var(--sky); }
+    .sb-nav-next { background: var(--sky); color: #fff; box-shadow: 0 4px 14px rgba(14,165,233,0.35); }
+    .sb-nav-next:hover { background: var(--sky-dark); }
+
+    /* ═══ PAGE FOOTER ═══ */
+    .page-footer { margin: 0 0 72px; padding: 0 56px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; z-index: 1; position: relative; }
+    .coverage-box { background: var(--white); border: 1.5px solid var(--border); border-radius: 14px; padding: 16px 20px; box-shadow: var(--shadow-sm); }
+    .coverage-label { font-family: var(--mono); font-size: 0.65rem; color: var(--sky); font-weight: 500; letter-spacing: .08em; margin-bottom: 8px; }
+    .coverage-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ctag { font-family: var(--mono); font-size: 0.65rem; background: var(--sky-lt); color: var(--sky); border: 1px solid var(--sky-md); padding: 3px 9px; border-radius: 20px; }
+    .footer-next { display: flex; align-items: center; gap: 14px; text-decoration: none; background: var(--sky); color: #fff; padding: 16px 24px; border-radius: 14px; box-shadow: 0 6px 20px rgba(14,165,233,0.35); transition: all .2s; }
+    .footer-next:hover { background: var(--sky-dark); transform: translateX(4px); }
+    .fn-label { font-family: var(--mono); font-size: 0.65rem; opacity: 0.75; letter-spacing: .06em; }
+    .fn-title { font-family: var(--display); font-size: 1.1rem; font-weight: 700; }
+    .fn-icon  { font-size: 1.4rem; }
+  </style>
+  <script src="/static/neelu.js" defer></script>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <div class="nav-left">
+    <a href="/" class="back-btn">← Home</a>
+    <span class="nav-badge">Foundation · 02</span>
+  </div>
+  <div class="progress-dots">
+    <div class="dot active" data-sec="sec-1"></div>
+    <div class="dot"        data-sec="sec-2"></div>
+    <div class="dot"        data-sec="sec-3"></div>
+    <div class="dot"        data-sec="sec-4"></div>
+  </div>
+</nav>
+
+<!-- ═══ PAGE LAYOUT ═══ -->
+<div class="page-layout">
+<div class="main-col">
+
+<!-- HERO -->
+<div class="hero reveal">
+  <div class="hero-eyebrow">⬇ Topic 2 of 6 — Foundation</div>
+  <div class="hero-accent-line"></div>
+  <h1>Pool<span>ing</span></h1>
+  <p>Discover how CNNs shrink feature maps to cut computation, build position tolerance, and focus on what matters — through an interactive step-by-step pooling demo.</p>
+</div>
+
+<!-- ═══ SECTION 1 — WHAT IS POOLING? ═══ -->
+<div class="section reveal" id="sec-1">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>What is Pooling?</h2>
+  </div>
+
+  <div class="card">
+    <p>After a convolution layer produces a feature map, a <span class="hl">pooling layer</span> slides a small window across it and summarises each region into a single number — either the <strong>maximum</strong> or the <strong>average</strong> of the values inside. The result is a smaller feature map with the same number of channels.</p>
+    <p>Pooling does two important jobs: it <span class="hl-teal">reduces spatial size</span> (fewer numbers to process in the next layer) and it gives the network <span class="hl-amb">translation invariance</span> — the ability to recognise the same feature even if it shifts a few pixels.</p>
+    <div class="analogy">
+      <div class="analogy-label">💡 Analogy</div>
+      <p>Imagine summarising a photograph by dividing it into a grid of 4-pixel squares and writing down only the brightest colour in each square. You lose exact pixel positions, but keep the essential information — and the picture is four times smaller.</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="mini-card">
+      <div class="mini-card-title">WHY AFTER CONVOLUTION?</div>
+      <p>Convolution maps are big and redundant — nearby values are highly correlated. Pooling compresses them aggressively while preserving detected features, so the next conv layer covers a wider area of the original image for free.</p>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-title">TYPICAL SETTINGS</div>
+      <p>The most common choice is a <strong>2×2 window with stride 2</strong>. This halves both height and width, reducing the feature map to one quarter its size. No learnable parameters — pooling is entirely parameter-free.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SECTION 2 — TYPES OF POOLING ═══ -->
+<div class="section reveal" id="sec-2">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>Types of Pooling</h2>
+  </div>
+
+  <div class="pool-types">
+
+    <!-- Max Pool -->
+    <div class="pt-card">
+      <div class="pt-icon">🔺</div>
+      <div class="pt-name">Max Pooling</div>
+      <span class="pt-tag" style="background:var(--sky-lt);color:var(--sky);border:1px solid var(--sky-md);">Most common</span>
+      <p class="pt-desc">Takes the <strong>largest</strong> value in each window. Keeps the strongest feature activation and discards the rest. Works best for detecting whether a feature is present anywhere in a region.</p>
+      <div class="pt-grid">
+        <div class="pt-cell" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;">3</div>
+        <div class="pt-cell" style="background:#0EA5E9;color:#fff;border-color:#0369a1;box-shadow:0 2px 8px rgba(14,165,233,0.4);">9</div>
+        <div class="pt-cell" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;">1</div>
+        <div class="pt-cell" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;">2</div>
+        <div style="grid-column:span 4;display:flex;align-items:center;gap:6px;margin-top:2px;">
+          <span style="font-family:var(--mono);font-size:0.6rem;color:var(--text-3);">max(3,9,1,2)</span>
+          <span style="font-family:var(--mono);font-size:0.65rem;color:var(--sky);font-weight:700;">= 9 ✓</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avg Pool -->
+    <div class="pt-card">
+      <div class="pt-icon">📊</div>
+      <div class="pt-name">Average Pooling</div>
+      <span class="pt-tag" style="background:var(--teal-lt);color:var(--teal);border:1px solid var(--teal-md);">Smoother</span>
+      <p class="pt-desc">Takes the <strong>mean</strong> of all values in the window. Retains more information than max pooling — useful when you care about the overall presence of a feature, not just its peak.</p>
+      <div class="pt-grid">
+        <div class="pt-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">3</div>
+        <div class="pt-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">9</div>
+        <div class="pt-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">1</div>
+        <div class="pt-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">2</div>
+        <div style="grid-column:span 4;display:flex;align-items:center;gap:6px;margin-top:2px;">
+          <span style="font-family:var(--mono);font-size:0.6rem;color:var(--text-3);">avg(3,9,1,2)</span>
+          <span style="font-family:var(--mono);font-size:0.65rem;color:var(--teal);font-weight:700;">= 3.75 ✓</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Avg Pool -->
+    <div class="pt-card">
+      <div class="pt-icon">🌐</div>
+      <div class="pt-name">Global Average Pool</div>
+      <span class="pt-tag" style="background:var(--violet-lt);color:var(--violet);border:1px solid #c4b5fd);">Modern CNNs</span>
+      <p class="pt-desc">Collapses an <em>entire</em> feature map — no matter its size — into a <strong>single number</strong>. Used just before the final classifier in modern networks like ResNet and MobileNet. Replaces large fully-connected layers entirely.</p>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
+        <div style="display:grid;grid-template-columns:repeat(4,16px);gap:2px;">
+          <div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.9;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.6;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.4;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.8;"></div>
+          <div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.5;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.7;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.3;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.9;"></div>
+          <div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.2;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.8;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.6;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.4;"></div>
+          <div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.7;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.5;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.9;"></div><div style="width:16px;height:16px;border-radius:2px;background:var(--sky);opacity:0.3;"></div>
+        </div>
+        <span style="color:var(--text-3);font-size:1rem;">→</span>
+        <div style="width:28px;height:28px;border-radius:6px;background:var(--violet-lt);border:2px solid #c4b5fd;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.65rem;font-weight:700;color:var(--violet);">0.6</div>
+        <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-3);">1 scalar</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SECTION 3 — INTERACTIVE DEMO ═══ -->
+<div class="section reveal" id="sec-3">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>Interactive Demo — Step Through It</h2>
+  </div>
+
+  <div class="demo-wrapper">
+
+    <!-- TOP BAR -->
+    <div class="demo-topbar">
+      <span class="demo-title">⬇ POOLING VISUALISER</span>
+      <div class="demo-controls">
+        <div class="ctrl-group">
+          <span class="ctrl-label">Pool Type</span>
+          <select id="pool-select">
+            <option value="max">Max Pooling</option>
+            <option value="avg">Average Pooling</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">Window</span>
+          <select id="win-select">
+            <option value="2">2×2</option>
+            <option value="3">3×3</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">Stride</span>
+          <select id="stride-select">
+            <option value="2">2</option>
+            <option value="1">1</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- BODY: Input → Output -->
+    <div class="demo-body">
+      <div class="grid-section">
+        <div class="grid-label">Input Feature Map (6×6)</div>
+        <div id="input-grid"></div>
+      </div>
+      <div class="demo-arrow">
+        <div class="arrow-body"></div>
+        <div class="arrow-tip">▶</div>
+      </div>
+      <div class="grid-section">
+        <div class="grid-label" id="output-label">Output</div>
+        <div id="output-grid"></div>
+        <div style="margin-top:10px;font-size:0.7rem;color:var(--text-3);font-family:var(--mono);text-align:center;" id="output-size-label"></div>
+      </div>
+    </div>
+
+    <!-- COMPUTATION PANEL -->
+    <div class="computation-panel">
+      <div class="comp-label">⚙ Computation at this window</div>
+      <div class="comp-equation" id="comp-eq">
+        Press <strong style="color:var(--sky);">Next Step</strong> to begin. The pooling window will slide across the input. At each position, it summarises all values inside into a single output number.
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="demo-footer">
+      <div class="step-info">
+        <div class="step-count">Step <span id="step-cur">0</span> / <span id="step-tot">0</span></div>
+        <div class="step-hint" id="step-hint">Ready — click Next Step to start</div>
+        <div class="step-progress"><div class="step-bar" id="step-bar" style="width:0%"></div></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn-main btn-reset" id="btn-reset">↺ Reset</button>
+        <button class="btn-main btn-next"  id="btn-next">Next Step →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SECTION 4 — OUTPUT SIZE & INVARIANCE ═══ -->
+<div class="section reveal" id="sec-4">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Output Size &amp; Translation Invariance</h2>
+  </div>
+
+  <div class="card">
+    <p>Pooling shrinks the spatial dimensions according to the same formula as convolution. With a <span class="hl">2×2 window and stride 2</span> (the most common setup), a 6×6 feature map becomes a 3×3 map — four times fewer values, but all the key information preserved.</p>
+    <p><span class="hl-teal">Translation invariance</span> means the network produces the same (or very similar) output even if the input pattern shifts by a pixel or two. Max pooling achieves this because the max value in a 2×2 region stays the same whether the activating feature is at the top-left or bottom-right of that region.</p>
+  </div>
+
+  <div class="compare-grid">
+    <div class="cmp-card">
+      <div class="cmp-title">Max Pool — Shift Test</div>
+      <span class="cmp-tag" style="background:var(--sky-lt);color:var(--sky);border:1px solid var(--sky-md);">Invariant ✓</span>
+      <p>A strong edge at position (0,0) or (1,0) gives the <em>same</em> max output of <strong>8</strong>. The network cannot tell — nor does it need to.</p>
+      <div style="display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;">
+        <div>
+          <div style="font-family:var(--mono);font-size:0.6rem;color:var(--text-3);margin-bottom:4px;">Original</div>
+          <div class="cmp-viz">
+            <div class="cmp-cell" style="background:#0EA5E9;color:#fff;border-color:var(--sky-dark);">8</div><div class="cmp-cell" style="background:var(--sky-lt);color:var(--sky);border-color:var(--sky-md);">2</div>
+            <div class="cmp-cell" style="background:var(--sky-lt);color:var(--sky);border-color:var(--sky-md);">1</div><div class="cmp-cell" style="background:var(--sky-lt);color:var(--sky);border-color:var(--sky-md);">3</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:0.68rem;color:var(--sky);margin-top:6px;font-weight:700;">max = 8</div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:0.6rem;color:var(--text-3);margin-bottom:4px;">Shifted 1px</div>
+          <div class="cmp-viz">
+            <div class="cmp-cell" style="background:var(--sky-lt);color:var(--sky);border-color:var(--sky-md);">2</div><div class="cmp-cell" style="background:var(--sky-lt);color:var(--sky);border-color:var(--sky-md);">1</div>
+            <div class="cmp-cell" style="background:#0EA5E9;color:#fff;border-color:var(--sky-dark);">8</div><div class="cmp-cell" style="background:var(--sky-lt);color:var(--sky);border-color:var(--sky-md);">3</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:0.68rem;color:var(--sky);margin-top:6px;font-weight:700;">max = 8 ✓</div>
+        </div>
+      </div>
+    </div>
+    <div class="cmp-card">
+      <div class="cmp-title">Avg Pool — Shift Test</div>
+      <span class="cmp-tag" style="background:var(--teal-lt);color:var(--teal);border:1px solid var(--teal-md);">Less invariant ⚠</span>
+      <p>Average pooling is more sensitive to position because every value contributes equally. A shift changes the mean significantly.</p>
+      <div style="display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;">
+        <div>
+          <div style="font-family:var(--mono);font-size:0.6rem;color:var(--text-3);margin-bottom:4px;">Original</div>
+          <div class="cmp-viz">
+            <div class="cmp-cell" style="background:var(--teal);color:#fff;border-color:var(--teal-md);">8</div><div class="cmp-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">2</div>
+            <div class="cmp-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">1</div><div class="cmp-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">3</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:0.68rem;color:var(--teal);margin-top:6px;font-weight:700;">avg = 3.5</div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:0.6rem;color:var(--text-3);margin-bottom:4px;">Shifted 1px</div>
+          <div class="cmp-viz">
+            <div class="cmp-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">2</div><div class="cmp-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">1</div>
+            <div class="cmp-cell" style="background:var(--teal);color:#fff;border-color:var(--teal-md);">8</div><div class="cmp-cell" style="background:var(--teal-lt);color:var(--teal);border-color:var(--teal-md);">3</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:0.68rem;color:var(--teal);margin-top:6px;font-weight:700;">avg = 3.5 (same here, but not always)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="formula-box" style="margin-top:16px;">
+    <div class="comp-label">📐 Output Size Formula</div>
+    <div class="formula-row">
+      <span class="f-label">General</span>
+      <span class="f-val">⌊(N − F) / S⌋ + 1</span>
+    </div>
+    <div class="formula-row">
+      <span class="f-label">2×2, stride 2</span>
+      <span class="f-val">⌊(N − 2) / 2⌋ + 1  =  N / 2</span>
+    </div>
+    <div class="formula-row" style="margin-top:4px;">
+      <span class="f-label" style="color:#8fafc7;font-size:0.65rem;width:auto;">N = input size &nbsp;·&nbsp; F = pool window &nbsp;·&nbsp; S = stride &nbsp;·&nbsp; No learnable parameters</span>
+    </div>
+  </div>
+
+  <!-- Global Average Pooling visual -->
+  <div class="card" style="margin-top:16px;">
+    <p><span class="hl">Global Average Pooling (GAP)</span> takes this to the extreme — instead of a sliding window, the entire feature map (however large) is averaged into a single number per channel. A network with 128 channels before GAP produces a 128-element vector ready for classification — no need for any flattening or dense layers.</p>
+  </div>
+
+  <div class="gap-visual">
+    <div>
+      <div style="font-family:var(--mono);font-size:0.65rem;color:var(--text-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">128 feature maps (e.g. 7×7 each)</div>
+      <div class="gap-maps">
+        <div class="gap-map">
+          <div class="gap-grid" id="gap-map-1"></div>
+          <div class="gap-label">ch 1</div>
+        </div>
+        <div class="gap-map">
+          <div class="gap-grid" id="gap-map-2"></div>
+          <div class="gap-label">ch 2</div>
+        </div>
+        <div class="gap-map">
+          <div class="gap-grid" id="gap-map-3"></div>
+          <div class="gap-label">ch 3</div>
+        </div>
+        <div style="display:flex;align-items:center;font-family:var(--mono);font-size:0.7rem;color:var(--text-3);padding-bottom:14px;">···</div>
+      </div>
+    </div>
+    <div class="gap-arrow">→</div>
+    <div>
+      <div style="font-family:var(--mono);font-size:0.65rem;color:var(--text-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">GAP → 128 scalars</div>
+      <div class="gap-vec" id="gap-vec"></div>
+    </div>
+    <div class="gap-arrow">→</div>
+    <div style="background:var(--violet-lt);border:2px solid #c4b5fd;border-radius:12px;padding:14px 18px;text-align:center;">
+      <div style="font-size:1.4rem;margin-bottom:4px;">🎯</div>
+      <div style="font-family:var(--mono);font-size:0.65rem;color:var(--violet);font-weight:700;">Softmax<br>Classifier</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE FOOTER -->
+<div class="page-footer reveal">
+  <div class="coverage-box">
+    <div class="coverage-label">TOPICS COVERED</div>
+    <div class="coverage-tags">
+      <span class="ctag">Max Pooling</span>
+      <span class="ctag">Avg Pooling</span>
+      <span class="ctag">Global Avg Pool</span>
+      <span class="ctag">Output Size</span>
+      <span class="ctag">Translation Invariance</span>
+    </div>
+  </div>
+  <a href="/activation" class="footer-next">
+    <div class="fn-icon">⚡</div>
+    <div>
+      <div class="fn-label">NEXT UP</div>
+      <div class="fn-title">Activation Functions →</div>
+    </div>
+  </a>
+</div>
+
+</div><!-- /main-col -->
+
+<!-- ═══ STICKY SIDEBAR ═══ -->
+<div class="sidebar-col">
+
+  <!-- Module Progress -->
+  <div class="sb-card">
+    <div class="sb-label">Module Progress</div>
+    <div class="mod-list">
+      <div class="mod-item">
+        <div class="mod-check done">✓</div>
+        <span class="mod-name done">Convolution</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check active">⬇</div>
+        <span class="mod-name active">Pooling</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Activation Functions</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Training CNNs</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Architectures</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Code Lab</span>
+      </div>
+    </div>
+    <div class="sb-progress-row">
+      <div class="sb-progress-label" id="sb-prog-label">2 of 6 modules</div>
+      <div class="sb-progress-track">
+        <div class="sb-progress-fill" id="sb-fill" style="width:33.3%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Terms -->
+  <div class="sb-card">
+    <div class="sb-label">Key Terms</div>
+    <div class="term-list">
+      <div class="term-item">
+        <div class="term-name">Max Pooling</div>
+        <div class="term-desc">Takes the largest value from each pooling window</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Average Pooling</div>
+        <div class="term-desc">Takes the mean of all values in the window</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Global Avg Pool</div>
+        <div class="term-desc">Averages an entire feature map to one scalar per channel</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Translation Invariance</div>
+        <div class="term-desc">Output is unchanged when input shifts slightly</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Downsampling</div>
+        <div class="term-desc">Reducing spatial resolution to decrease computation</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Stride</div>
+        <div class="term-desc">How many pixels the pool window moves each step</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="sb-nav">
+    <a href="/convolution" class="sb-nav-prev">← Conv</a>
+    <a href="/activation"  class="sb-nav-next">Activation →</a>
+  </div>
+
+</div><!-- /sidebar-col -->
+</div><!-- /page-layout -->
+
+<!-- ═══ JAVASCRIPT ═══ -->
+<script>
+// ── INPUT DATA ─────────────────────────────────────────────
+const INPUT = [
+  [12, 20,  3, 14,  8, 19],
+  [ 5, 17, 11,  2, 22,  6],
+  [15,  1, 18,  9,  4, 13],
+  [ 7, 23,  6, 16, 10,  2],
+  [20,  4, 12,  3, 18, 11],
+  [ 8, 14,  9, 21,  5, 17],
+];
+
+// ── STATE ──────────────────────────────────────────────────
+let poolType = 'max', winSize = 2, stride = 2;
+let steps = [], stepIdx = -1, outputArr = [], outRows = 0, outCols = 0;
+
+// ── BUILD STEPS ────────────────────────────────────────────
+function computeSteps() {
+  const inR = INPUT.length, inC = INPUT[0].length;
+  outRows = Math.floor((inR - winSize) / stride) + 1;
+  outCols = Math.floor((inC - winSize) / stride) + 1;
+  outputArr = Array.from({length: outRows}, () => Array(outCols).fill(null));
+  steps = [];
+  for (let or = 0; or < outRows; or++) {
+    for (let oc = 0; oc < outCols; oc++) {
+      const ir = or * stride, ic = oc * stride;
+      const patch = [];
+      for (let wr = 0; wr < winSize; wr++)
+        for (let wc = 0; wc < winSize; wc++)
+          patch.push({ v: INPUT[ir+wr][ic+wc], r: ir+wr, c: ic+wc });
+      const vals = patch.map(p => p.v);
+      const result = poolType === 'max'
+        ? Math.max(...vals)
+        : Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*10)/10;
+      steps.push({ or, oc, ir, ic, patch, result, maxVal: Math.max(...vals) });
+    }
+  }
+}
+
+// ── RENDER INPUT ───────────────────────────────────────────
+function renderInputGrid(activePatch, doneSet) {
+  const el = document.getElementById('input-grid');
+  el.style.gridTemplateColumns = `repeat(${INPUT[0].length}, 58px)`;
+  el.innerHTML = '';
+  for (let r = 0; r < INPUT.length; r++) {
+    for (let c = 0; c < INPUT[0].length; c++) {
+      const d = document.createElement('div');
+      const inPatch = activePatch?.find(p => p.r===r && p.c===c);
+      const isMax = inPatch && poolType==='max' && INPUT[r][c] === activePatch.find(p=>p.v===Math.max(...activePatch.map(x=>x.v)))?.v;
+      let cls = 'cell ';
+      if (inPatch && isMax && poolType==='max') cls += 'is-max';
+      else if (inPatch) cls += 'active';
+      else if (doneSet?.has(`${r},${c}`)) cls += 'done-cell';
+      else cls += 'normal';
+      d.className = cls;
+      d.textContent = INPUT[r][c];
+      el.appendChild(d);
+    }
+  }
+}
+
+// ── RENDER OUTPUT ──────────────────────────────────────────
+function renderOutputGrid(cur) {
+  const el = document.getElementById('output-grid');
+  el.style.gridTemplateColumns = `repeat(${outCols}, 58px)`;
+  el.innerHTML = '';
+  for (let r = 0; r < outRows; r++) {
+    for (let c = 0; c < outCols; c++) {
+      const d = document.createElement('div');
+      d.className = 'out-cell';
+      const si = r * outCols + c;
+      if (cur !== null && si === cur) {
+        d.classList.add('current');
+        if (outputArr[r][c] !== null) d.textContent = outputArr[r][c];
+      } else if (outputArr[r][c] !== null) {
+        d.classList.add('filled');
+        d.textContent = outputArr[r][c];
+      }
+      el.appendChild(d);
+    }
+  }
+  const sz = `${outRows}×${outCols}`;
+  document.getElementById('output-size-label').textContent = `Output: ${sz}`;
+  document.getElementById('output-label').textContent = `Output (${sz})`;
+}
+
+// ── RENDER COMPUTATION ─────────────────────────────────────
+function renderComp(step) {
+  const vals = step.patch.map(p => p.v);
+  const eq = document.getElementById('comp-eq');
+  const valSpans = vals.map(v => {
+    const isMax = v === step.maxVal;
+    return poolType === 'max' && isMax
+      ? `<span class="val-max">${v}</span>`
+      : `<span class="val-v">${v}</span>`;
+  }).join('<span style="color:var(--text-3);">, </span>');
+
+  const op = poolType === 'max'
+    ? `max(${valSpans}) = <span class="val-r">${step.result}</span>`
+    : `avg(${valSpans}) = (${vals.join('+')})/4 = <span class="val-r">${step.result}</span>`;
+
+  eq.innerHTML = `
+    <div style="margin-bottom:10px;font-size:0.75rem;">
+      <span style="color:var(--text-3);">Window at →</span>
+      <span style="color:var(--sky);font-weight:600;margin-left:8px;">output[${step.or}][${step.oc}]</span>
+      <span style="color:var(--text-3);margin-left:8px;">input patch starts at [${step.ir},${step.ic}]</span>
+    </div>
+    <div style="line-height:2.2;">${op}</div>
+  `;
+}
+
+// ── ADVANCE ────────────────────────────────────────────────
+function collectDone() {
+  const s = new Set();
+  for (let i = 0; i < stepIdx; i++)
+    steps[i]?.patch.forEach(p => s.add(`${p.r},${p.c}`));
+  return s;
+}
+
+function advance() {
+  if (stepIdx >= steps.length - 1) return;
+  stepIdx++;
+  const step = steps[stepIdx];
+  outputArr[step.or][step.oc] = step.result;
+  renderInputGrid(step.patch, collectDone());
+  renderOutputGrid(stepIdx);
+  renderComp(step);
+  const pct = (stepIdx+1) / steps.length * 100;
+  document.getElementById('step-bar').style.width = pct + '%';
+  document.getElementById('step-cur').textContent = stepIdx + 1;
+  const hint = document.getElementById('step-hint');
+  if (stepIdx === steps.length - 1) {
+    hint.textContent = '✓ Complete — all positions pooled!';
+    document.getElementById('btn-next').disabled = true;
+  } else {
+    hint.textContent = `Window at [${step.ir},${step.ic}] → output[${step.or}][${step.oc}]`;
+  }
+  updateNavDots();
+}
+
+function reset() {
+  computeSteps();
+  stepIdx = -1;
+  outputArr = Array.from({length: outRows}, () => Array(outCols).fill(null));
+  renderInputGrid(null, new Set());
+  renderOutputGrid(null);
+  document.getElementById('comp-eq').innerHTML = `Press <strong style="color:var(--sky);">Next Step</strong> to begin. The ${winSize}×${winSize} window slides across the input with stride ${stride}. At each position, it reduces ${winSize*winSize} values to <strong>1</strong> using <strong>${poolType} pooling</strong>.`;
+  document.getElementById('step-cur').textContent = '0';
+  document.getElementById('step-tot').textContent = steps.length;
+  document.getElementById('step-bar').style.width = '0%';
+  document.getElementById('step-hint').textContent = `${steps.length} total steps · ${winSize}×${winSize} ${poolType} pool · stride ${stride}`;
+  document.getElementById('btn-next').disabled = false;
+}
+
+document.getElementById('pool-select').addEventListener('change', e => { poolType = e.target.value; reset(); });
+document.getElementById('win-select').addEventListener('change',  e => { winSize = parseInt(e.target.value); reset(); });
+document.getElementById('stride-select').addEventListener('change',e => { stride = parseInt(e.target.value); reset(); });
+document.getElementById('btn-next').addEventListener('click', advance);
+document.getElementById('btn-reset').addEventListener('click', reset);
+
+// ── GAP VISUAL ─────────────────────────────────────────────
+function buildGapMap(id, baseColor, opacity) {
+  const el = document.getElementById(id);
+  for (let i = 0; i < 16; i++) {
+    const d = document.createElement('div');
+    d.className = 'gap-cell';
+    const o = (Math.sin(i * 0.8 + opacity) * 0.3 + 0.55).toFixed(2);
+    d.style.background = baseColor;
+    d.style.opacity = o;
+    el.appendChild(d);
+  }
+}
+buildGapMap('gap-map-1', '#0EA5E9', 0.1);
+buildGapMap('gap-map-2', '#0d9488', 0.5);
+buildGapMap('gap-map-3', '#7c3aed', 1.1);
+
+const gapVec = document.getElementById('gap-vec');
+const gapColors = ['#0EA5E9','#0d9488','#7c3aed','#d97706','#059669'];
+const gapVals   = ['0.72', '0.41', '0.88', '0.33', '0.61'];
+gapVals.forEach((v, i) => {
+  const d = document.createElement('div');
+  d.className = 'gap-val';
+  d.style.background = gapColors[i % gapColors.length] + '22';
+  d.style.border = `1.5px solid ${gapColors[i % gapColors.length]}55`;
+  d.style.color = gapColors[i % gapColors.length];
+  d.textContent = i < 4 ? v : '···';
+  gapVec.appendChild(d);
+});
+
+// ── NAV DOTS & SIDEBAR ─────────────────────────────────────
+const SECS = ['sec-1','sec-2','sec-3','sec-4'];
+function getCurrentSection() {
+  let cur = 0;
+  SECS.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top < window.innerHeight * 0.55) cur = i;
+  });
+  return cur;
+}
+function updateNavDots() {
+  const cur = getCurrentSection();
+  document.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('active', i === cur);
+    d.classList.toggle('done',   i < cur);
+  });
+}
+function updateSidebarProgress() {
+  const cur = getCurrentSection();
+  const pct = Math.round(((cur + 1) / SECS.length) * 100);
+  const fill = document.getElementById('sb-fill');
+  // sidebar fill: convolution done (16%) + current module progress
+  const total = Math.min(100, 16 + Math.round((pct / 100) * 17));
+  if (fill) fill.style.width = total + '%';
+}
+document.querySelectorAll('.dot').forEach((d, i) =>
+  d.addEventListener('click', () => document.getElementById(SECS[i])?.scrollIntoView({behavior:'smooth'}))
+);
+window.addEventListener('scroll', () => { updateNavDots(); updateSidebarProgress(); }, {passive: true});
+
+// ── SCROLL REVEAL ──────────────────────────────────────────
+const obs = new IntersectionObserver(entries =>
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+  {threshold: 0.08}
+);
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// ── INIT ───────────────────────────────────────────────────
+reset();
+</script>
+</body>
+</html>

@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Convolution — CNN Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #ffffff;
+      --bg2:       #f2f0eb;
+      --white:     #ffffff;
+      --border:    #e4e0d8;
+      --border2:   #d4cfc4;
+
+      --purple:    #7C3AED;
+      --purple-lt: #ede9fb;
+      --purple-md: #c4b5fd;
+
+      --blue:      #0284c7;
+      --blue-lt:   #e0f2fe;
+
+      --green:     #059669;
+      --green-lt:  #d1fae5;
+
+      --amber:     #d97706;
+      --amber-lt:  #fef3c7;
+
+      --coral:     #e11d48;
+      --coral-lt:  #ffe4e6;
+
+      --text:      #1c1917;
+      --text-2:    #57534e;
+      --text-3:    #a8a29e;
+
+      --mono: 'DM Mono', monospace;
+      --display: 'Fraunces', serif;
+      --sans: 'Plus Jakarta Sans', sans-serif;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -200px; left: -100px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(2,132,199,0.06) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* NAV */
+    nav {
+      position: sticky; top: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 36px;
+      background: rgba(250,249,246,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1.5px solid var(--border);
+      z-index: 100;
+    }
+    .nav-left { display: flex; align-items: center; gap: 14px; }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      text-decoration: none; color: var(--text-2);
+      font-size: 0.8rem; font-family: var(--mono);
+      padding: 6px 14px;
+      border: 1.5px solid var(--border2); border-radius: 8px;
+      background: var(--white); transition: all .2s;
+      box-shadow: var(--shadow-sm);
+    }
+    .back-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .nav-badge {
+      font-family: var(--mono); font-size: 0.68rem;
+      padding: 4px 10px;
+      background: var(--purple-lt); color: var(--purple);
+      border: 1.5px solid var(--purple-md); border-radius: 20px;
+      font-weight: 500; letter-spacing: .06em;
+    }
+    .progress-dots { display: flex; gap: 6px; align-items: center; }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--bg2); border: 1.5px solid var(--border2);
+      cursor: pointer; transition: all .2s;
+    }
+    .dot:hover { border-color: var(--purple); }
+    .dot.active { background: var(--purple); border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-lt); }
+    .dot.done { background: var(--purple-lt); border-color: var(--purple); }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      padding: 64px 56px 48px; z-index: 1;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 0.72rem; color: var(--purple);
+      background: var(--purple-lt); border: 1.5px solid var(--purple-md);
+      padding: 5px 12px; border-radius: 20px;
+      margin-bottom: 20px; letter-spacing: .06em;
+    }
+    .hero h1 {
+      font-family: var(--display);
+      font-size: clamp(2.4rem, 5.5vw, 4rem);
+      font-weight: 900; letter-spacing: -0.03em; line-height: 1.05;
+      color: var(--text); margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--purple); font-style: italic; }
+    .hero p { font-size: 1.05rem; color: var(--text-2); max-width: 520px; line-height: 1.75; }
+    .hero-accent-line {
+      width: 64px; height: 5px;
+      background: linear-gradient(90deg, var(--purple) 0%, var(--blue) 100%);
+      border-radius: 3px; margin-bottom: 20px;
+    }
+
+    /* SECTIONS */
+    .section {
+      position: relative;
+      margin: 0 0 60px; padding: 0 56px; z-index: 1;
+    }
+    .section-header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+    .section-num {
+      font-family: var(--mono); font-size: 0.65rem; font-weight: 500;
+      color: var(--white); background: var(--purple);
+      padding: 4px 9px; border-radius: 6px;
+      letter-spacing: .08em; flex-shrink: 0;
+    }
+    .section h2 {
+      font-family: var(--display); font-size: 1.5rem;
+      font-weight: 700; letter-spacing: -0.02em; color: var(--text);
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: 16px; padding: 28px 32px;
+      margin-bottom: 16px; box-shadow: var(--shadow-sm);
+    }
+    .card p { color: var(--text-2); line-height: 1.8; font-size: 0.95rem; }
+    .card p + p { margin-top: 12px; }
+
+    .hl { font-weight: 700; color: var(--purple); background: var(--purple-lt); padding: 1px 6px; border-radius: 4px; }
+    .hl-blue { font-weight: 700; color: var(--blue); background: var(--blue-lt); padding: 1px 6px; border-radius: 4px; }
+    .hl-green { font-weight: 700; color: var(--green); background: var(--green-lt); padding: 1px 6px; border-radius: 4px; }
+
+    .analogy {
+      background: linear-gradient(135deg, var(--amber-lt), #fffbeb);
+      border: 1.5px solid #fcd34d; border-left: 4px solid var(--amber);
+      border-radius: 12px; padding: 18px 22px; margin-top: 18px;
+    }
+    .analogy-label { font-family: var(--mono); font-size: 0.65rem; color: var(--amber); font-weight: 500; letter-spacing: .1em; margin-bottom: 8px; }
+    .analogy p { font-size: 0.9rem; color: #92400e; }
+
+    .formula {
+      font-family: var(--mono); background: var(--text); color: #a5f3fc;
+      border-radius: 12px; padding: 18px 24px; font-size: 0.88rem;
+      text-align: center; margin-top: 16px; letter-spacing: .04em;
+      box-shadow: var(--shadow-md);
+    }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+    .mini-card { background: var(--bg2); border: 1.5px solid var(--border); border-radius: 12px; padding: 20px; }
+    .mini-card-title { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; color: var(--purple); margin-bottom: 8px; letter-spacing: .05em; }
+    .mini-card p { font-size: 0.87rem; color: var(--text-2); line-height: 1.65; }
+
+    /* KERNEL SHOWCASE */
+    .kernel-row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .k-card {
+      flex: 1; min-width: 150px;
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 18px 16px; text-align: center;
+      box-shadow: var(--shadow-sm); transition: box-shadow .2s, transform .2s;
+    }
+    .k-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .k-name { font-weight: 700; font-size: 0.82rem; margin-bottom: 4px; color: var(--text); }
+    .k-desc { font-size: 0.71rem; color: var(--text-3); margin-bottom: 14px; line-height: 1.5; }
+    .k-grid { display: inline-grid; grid-template-columns: repeat(3,34px); gap: 3px; }
+    .k-cell {
+      width: 34px; height: 34px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 0.65rem; font-weight: 500;
+      border: 1.5px solid transparent;
+    }
+
+    /* DEMO */
+    .demo-wrapper {
+      background: var(--white); border: 2px solid var(--border);
+      border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-lg);
+    }
+    .demo-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; background: var(--text); flex-wrap: wrap; gap: 12px;
+    }
+    .demo-title { font-family: var(--mono); font-size: 0.75rem; color: #a5f3fc; letter-spacing: .1em; }
+    .demo-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .ctrl-group { display: flex; align-items: center; gap: 6px; }
+    .ctrl-label { font-family: var(--mono); font-size: 0.65rem; color: #78716c; text-transform: uppercase; letter-spacing: .08em; }
+    select {
+      font-family: var(--mono); font-size: 0.72rem;
+      background: #292524; border: 1px solid #44403c; color: #e7e5e4;
+      border-radius: 6px; padding: 5px 10px; cursor: pointer; outline: none; transition: border-color .2s;
+    }
+    select:hover { border-color: var(--purple-md); }
+
+    .demo-body {
+      display: grid; grid-template-columns: 1fr 56px 1fr 56px 1fr;
+      align-items: center; padding: 36px 40px; gap: 0; background: var(--bg);
+    }
+    @media (max-width: 780px) { .demo-body { grid-template-columns: 1fr; gap: 24px; } }
+
+    .grid-section { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .grid-label {
+      font-family: var(--mono); font-size: 0.68rem; font-weight: 500;
+      color: var(--text-2); text-transform: uppercase; letter-spacing: .1em;
+      background: var(--bg2); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);
+    }
+
+    #input-grid { display: inline-grid; gap: 5px; }
+    .cell {
+      width: 54px; height: 54px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-family: var(--mono); font-size: 0.82rem;
+      font-weight: 500; border: 2px solid transparent; transition: all 0.25s ease;
+    }
+    .cell.normal { background: var(--white); color: var(--text-2); border-color: var(--border); box-shadow: var(--shadow-sm); }
+    .cell.active { background: var(--purple); color: #fff; border-color: #5b21b6; box-shadow: 0 4px 16px rgba(124,58,237,0.4); transform: scale(1.06); }
+    .cell.done-cell { background: var(--green-lt); color: var(--green); border-color: #6ee7b7; }
+    .cell.pad { background: var(--bg2); color: var(--text-3); border-color: var(--border); font-size: 0.65rem; }
+
+    #kernel-display { margin-top: 4px; }
+    .kernel-grid { display: inline-grid; grid-template-columns: repeat(3,58px); gap: 5px; }
+    .kernel-cell {
+      width: 58px; height: 58px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 0.9rem; font-weight: 700;
+      border: 2px solid var(--border); background: var(--white); box-shadow: var(--shadow-sm);
+    }
+
+    .demo-arrow { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 0; padding: 0; }
+    .arrow-body { width: 28px; height: 2px; background: linear-gradient(to right, var(--purple), var(--blue)); }
+    .arrow-tip { color: var(--blue); font-size: 1rem; line-height: 1; }
+
+    #output-grid { display: inline-grid; gap: 5px; }
+    .out-cell {
+      width: 54px; height: 54px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-family: var(--mono); font-size: 0.82rem; font-weight: 600;
+      border: 2px dashed var(--border); background: var(--bg2); color: transparent; transition: all 0.3s ease;
+    }
+    .out-cell.filled { background: var(--green-lt); color: var(--green); border: 2px solid #6ee7b7; box-shadow: var(--shadow-sm); }
+    .out-cell.current { background: var(--amber-lt); color: var(--amber); border: 2px solid #fcd34d; box-shadow: 0 4px 14px rgba(217,119,6,0.3); transform: scale(1.06); }
+
+    .computation-panel {
+      margin: 0 24px 24px; background: var(--white); border: 2px solid var(--border);
+      border-radius: 14px; padding: 20px 24px; min-height: 120px; box-shadow: var(--shadow-sm);
+    }
+    .comp-label { font-family: var(--mono); font-size: 0.65rem; font-weight: 500; color: var(--purple); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
+    .comp-equation { font-family: var(--mono); font-size: 0.82rem; color: var(--text-2); line-height: 2; word-break: break-word; }
+    .val-v { color: var(--purple); font-weight: 600; }
+    .val-k { color: var(--blue); font-weight: 600; }
+    .val-r { color: var(--amber); font-weight: 800; font-size: 1rem; }
+
+    .demo-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; border-top: 1.5px solid var(--border);
+      background: var(--bg2); flex-wrap: wrap; gap: 12px;
+    }
+    .step-info { display: flex; flex-direction: column; gap: 3px; }
+    .step-count { font-family: var(--mono); font-size: 0.85rem; color: var(--text); font-weight: 500; }
+    .step-hint { font-size: 0.72rem; color: var(--text-3); }
+    .step-progress { width: 160px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+    .step-bar { height: 100%; background: linear-gradient(90deg, var(--purple), var(--blue)); border-radius: 3px; transition: width .3s ease; }
+
+    .btn-group { display: flex; gap: 10px; }
+    .btn-main { font-family: var(--mono); font-size: 0.78rem; font-weight: 500; padding: 10px 22px; border-radius: 10px; border: none; cursor: pointer; transition: all .2s; }
+    .btn-next { background: var(--purple); color: #fff; box-shadow: 0 4px 16px rgba(124,58,237,0.35); }
+    .btn-next:hover { background: #6d28d9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
+    .btn-next:active { transform: translateY(0); }
+    .btn-next:disabled { background: var(--bg2); color: var(--text-3); box-shadow: none; cursor: not-allowed; transform: none; }
+    .btn-reset { background: var(--white); color: var(--text-2); border: 1.5px solid var(--border2); box-shadow: var(--shadow-sm); }
+    .btn-reset:hover { border-color: var(--purple); color: var(--purple); }
+
+    /* STRIDE & PADDING */
+    .sp-demo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 580px) { .sp-demo { grid-template-columns: 1fr; } }
+    .sp-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow-sm); }
+    .sp-card-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 6px; }
+    .sp-card p { font-size: 0.83rem; color: var(--text-2); line-height: 1.6; margin-bottom: 14px; }
+    .sp-grid { display: inline-grid; gap: 3px; }
+    .sp-cell { width: 28px; height: 28px; border-radius: 5px; border: 1.5px solid transparent; font-family: var(--mono); font-size: 0.55rem; display: flex; align-items: center; justify-content: center; }
+    .sp-normal { background: var(--bg2); border-color: var(--border); color: var(--text-3); }
+    .sp-active { background: var(--purple-lt); border-color: var(--purple); color: var(--purple); font-weight: 600; }
+    .sp-skip   { background: var(--coral-lt); border-color: #fca5a5; color: var(--coral); }
+    .sp-pad    { background: var(--bg); border-color: var(--border); color: var(--text-3); font-size: 0.5rem; }
+
+    .formula-box { background: var(--text); border-radius: 14px; padding: 22px 28px; margin-top: 16px; box-shadow: var(--shadow-md); }
+    .formula-box .comp-label { color: #a5f3fc; }
+    .formula-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .formula-row:last-child { margin-bottom: 0; }
+    .f-label { font-family: var(--mono); font-size: 0.7rem; color: #a8a29e; width: 130px; flex-shrink: 0; }
+    .f-val { font-family: var(--mono); font-size: 0.88rem; color: #a5f3fc; background: rgba(165,243,252,0.1); padding: 5px 14px; border-radius: 6px; border: 1px solid rgba(165,243,252,0.2); }
+
+    /* REVEAL */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity .55s ease, transform .55s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* PAGE LAYOUT — two-column */
+    .page-layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      align-items: start;
+      gap: 0;
+      padding: 0 32px 0 0;
+    }
+    .main-col { min-width: 0; }
+    .sidebar-col {
+      position: sticky;
+      top: 72px;
+      padding: 32px 0 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 10;
+    }
+    @media (max-width: 900px) {
+      .page-layout { grid-template-columns: 1fr; padding-right: 0; }
+      .sidebar-col { display: none; }
+    }
+
+    /* SIDEBAR CARDS */
+    .sb-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .sb-label {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 500;
+      color: var(--purple);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 14px;
+    }
+
+    /* Module list */
+    .mod-list { display: flex; flex-direction: column; gap: 8px; }
+    .mod-item { display: flex; align-items: center; gap: 10px; }
+    .mod-check {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 0.6rem;
+      border: 1.5px solid var(--border2);
+      background: var(--bg2);
+    }
+    .mod-check.done { background: var(--green); border-color: var(--green); color: #fff; }
+    .mod-check.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .mod-check.locked { background: var(--bg2); border-color: var(--border); }
+    .mod-name {
+      font-size: 0.82rem;
+      color: var(--text-3);
+      line-height: 1.3;
+    }
+    .mod-name.done { color: var(--text-2); font-weight: 500; }
+    .mod-name.active { color: var(--purple); font-weight: 700; }
+
+    /* Progress bar */
+    .sb-progress-row { margin-top: 14px; }
+    .sb-progress-label { font-size: 0.7rem; color: var(--text-3); margin-bottom: 6px; font-family: var(--mono); }
+    .sb-progress-track { height: 6px; background: var(--bg2); border-radius: 3px; overflow: hidden; }
+    .sb-progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #34d399); border-radius: 3px; transition: width .4s ease; }
+
+    /* Key terms */
+    .term-list { display: flex; flex-direction: column; gap: 8px; }
+    .term-item { background: var(--bg2); border-radius: 8px; padding: 9px 12px; }
+    .term-name { font-size: 0.75rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .term-desc { font-size: 0.7rem; color: var(--text-3); line-height: 1.5; }
+
+    /* Sidebar nav */
+    .sb-nav { display: flex; gap: 8px; }
+    .sb-nav a {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      text-decoration: none; padding: 10px;
+      border-radius: 10px; font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+      transition: all .2s;
+    }
+    .sb-nav-prev { background: var(--white); color: var(--text-2); border: 1.5px solid var(--border2); }
+    .sb-nav-prev:hover { border-color: var(--purple); color: var(--purple); }
+    .sb-nav-next { background: var(--purple); color: #fff; box-shadow: 0 4px 14px rgba(124,58,237,0.35); }
+    .sb-nav-next:hover { background: #6d28d9; }
+
+    /* PAGE FOOTER */
+    .page-footer { margin: 0 0 72px; padding: 0 56px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; z-index: 1; position: relative; }
+    .coverage-box { background: var(--white); border: 1.5px solid var(--border); border-radius: 14px; padding: 16px 20px; box-shadow: var(--shadow-sm); }
+    .coverage-label { font-family: var(--mono); font-size: 0.65rem; color: var(--purple); font-weight: 500; letter-spacing: .08em; margin-bottom: 8px; }
+    .coverage-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ctag { font-family: var(--mono); font-size: 0.65rem; background: var(--purple-lt); color: var(--purple); border: 1px solid var(--purple-md); padding: 3px 9px; border-radius: 20px; }
+    .footer-next { display: flex; align-items: center; gap: 14px; text-decoration: none; background: var(--purple); color: #fff; padding: 16px 24px; border-radius: 14px; box-shadow: 0 6px 20px rgba(124,58,237,0.35); transition: all .2s; }
+    .footer-next:hover { background: #6d28d9; transform: translateX(4px); box-shadow: 0 8px 28px rgba(124,58,237,0.45); }
+    .fn-label { font-family: var(--mono); font-size: 0.65rem; opacity: 0.75; letter-spacing: .06em; }
+    .fn-title { font-family: var(--display); font-size: 1.1rem; font-weight: 700; }
+    .fn-icon { font-size: 1.4rem; }
+  </style>
+  <script src="/static/neelu.js" defer></script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <a href="/" class="back-btn">← Home</a>
+    <span class="nav-badge">Foundation · 01</span>
+  </div>
+  <div class="progress-dots">
+    <div class="dot active" data-sec="sec-1"></div>
+    <div class="dot" data-sec="sec-2"></div>
+    <div class="dot" data-sec="sec-3"></div>
+    <div class="dot" data-sec="sec-4"></div>
+    <div class="dot" data-sec="sec-5"></div>
+  </div>
+</nav>
+
+<!-- PAGE LAYOUT -->
+<div class="page-layout">
+<div class="main-col">
+
+<!-- HERO -->
+<div class="hero reveal">
+  <div class="hero-eyebrow">⊕ Topic 1 of 6 — Foundation</div>
+  <div class="hero-accent-line"></div>
+  <h1>Con<span>volution</span></h1>
+  <p>Watch a filter slide across an image, step by step. Build deep intuition for kernels, stride, and padding through hands-on interaction.</p>
+</div>
+
+<!-- SECTION 1 -->
+<div class="section reveal" id="sec-1">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>What is Convolution?</h2>
+  </div>
+  <div class="card">
+    <p>In image processing, <span class="hl">convolution</span> is the process of sliding a small matrix called a <em>kernel</em> across the entire input image and computing a weighted sum at each position. Each result becomes one value in the output — called the <em>feature map</em>.</p>
+    <p>Unlike a fully-connected layer that assigns a separate weight to every pixel, a convolutional layer reuses the <span class="hl-blue">same kernel everywhere</span>. This is called <strong>parameter sharing</strong> — and it's why CNNs can process high-resolution images with far fewer parameters.</p>
+    <div class="analogy">
+      <div class="analogy-label">💡 Analogy</div>
+      <p>Imagine holding a stamp over a photograph and pressing it down at every position — left to right, top to bottom. Each imprint reveals a different pattern. That stamp is your kernel; the collection of imprints is your feature map.</p>
+    </div>
+  </div>
+  <div class="formula">Output(i, j) = Σ<sub>m</sub> Σ<sub>n</sub> &nbsp; Input(i+m, j+n) × Kernel(m, n)</div>
+</div>
+
+<!-- SECTION 2 -->
+<div class="section reveal" id="sec-2">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>The Kernel (Filter)</h2>
+  </div>
+  <div class="card">
+    <p>A kernel is a small 2-D grid of learnable weights — typically <strong>3×3</strong>, 5×5, or 7×7. During training the network discovers what each kernel should detect. Hand-crafted kernels below show you what's possible before training takes over.</p>
+  </div>
+  <div class="kernel-row" style="margin-top:16px;">
+    <div class="k-card">
+      <div class="k-name">Edge Detect</div>
+      <div class="k-desc">Highlights abrupt changes in brightness</div>
+      <div class="k-grid">
+        <div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div><div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div><div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div>
+        <div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div><div class="k-cell" style="background:#d1fae5;color:#059669;border-color:#6ee7b7;">+8</div><div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div>
+        <div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div><div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div><div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div>
+      </div>
+    </div>
+    <div class="k-card">
+      <div class="k-name">Blur</div>
+      <div class="k-desc">Averages neighbours, smooths noise</div>
+      <div class="k-grid">
+        <div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div><div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div><div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div>
+        <div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div><div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div><div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div>
+        <div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div><div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div><div class="k-cell" style="background:#e0f2fe;color:#0284c7;border-color:#7dd3fc;">1/9</div>
+      </div>
+    </div>
+    <div class="k-card">
+      <div class="k-name">Sharpen</div>
+      <div class="k-desc">Enhances edges, boosts contrast</div>
+      <div class="k-grid">
+        <div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div><div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div><div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div>
+        <div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div><div class="k-cell" style="background:#d1fae5;color:#059669;border-color:#6ee7b7;">+5</div><div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div>
+        <div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div><div class="k-cell" style="background:#ffe4e6;color:#e11d48;border-color:#fca5a5;">-1</div><div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div>
+      </div>
+    </div>
+    <div class="k-card">
+      <div class="k-name">Identity</div>
+      <div class="k-desc">Passes input through unchanged</div>
+      <div class="k-grid">
+        <div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div><div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div><div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div>
+        <div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div><div class="k-cell" style="background:#fef3c7;color:#d97706;border-color:#fcd34d;">1</div><div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div>
+        <div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div><div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div><div class="k-cell" style="background:var(--bg2);color:var(--text-3);border-color:var(--border);">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="two-col" style="margin-top:14px;">
+    <div class="mini-card">
+      <div class="mini-card-title">WHY 3×3?</div>
+      <p>Two stacked 3×3 convolutions cover the same receptive field as one 5×5, but with 18 vs 25 parameters — plus an extra non-linearity. Modern networks like VGG use almost exclusively 3×3 kernels for exactly this reason.</p>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-title">DEPTH = CHANNELS</div>
+      <p>A real kernel has depth equal to the input channels. For RGB, each kernel is 3×3×3 = 27 weights, and results across channels are summed to produce a single output feature map.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3 — INTERACTIVE DEMO -->
+<div class="section reveal" id="sec-3">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>Interactive Demo — Step Through It</h2>
+  </div>
+  <div class="demo-wrapper">
+    <div class="demo-topbar">
+      <span class="demo-title">⊕ CONVOLUTION VISUALISER</span>
+      <div class="demo-controls">
+        <div class="ctrl-group">
+          <span class="ctrl-label">Kernel</span>
+          <select id="kernel-select">
+            <option value="edge">Edge Detect</option>
+            <option value="blur">Blur</option>
+            <option value="sharpen">Sharpen</option>
+            <option value="identity">Identity</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">Stride</span>
+          <select id="stride-select">
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">Padding</span>
+          <select id="padding-select">
+            <option value="0">None</option>
+            <option value="1">Same (1px)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="demo-body">
+      <!-- INPUT -->
+      <div class="grid-section">
+        <div class="grid-label">Input Image (6×6)</div>
+        <div id="input-grid"></div>
+      </div>
+      <!-- ARROW 1 -->
+      <div class="demo-arrow">
+        <div class="arrow-body"></div>
+        <div class="arrow-tip">▶</div>
+      </div>
+      <!-- KERNEL -->
+      <div class="grid-section">
+        <div class="grid-label" id="kernel-label">Kernel</div>
+        <div id="kernel-display"></div>
+      </div>
+      <!-- ARROW 2 -->
+      <div class="demo-arrow">
+        <div class="arrow-body"></div>
+        <div class="arrow-tip">▶</div>
+      </div>
+      <!-- OUTPUT -->
+      <div class="grid-section">
+        <div class="grid-label" id="output-label">Output Feature Map</div>
+        <div id="output-grid"></div>
+        <div style="margin-top:10px;font-size:0.7rem;color:var(--text-3);font-family:var(--mono);text-align:center;" id="output-size-label"></div>
+      </div>
+    </div>
+    <div class="computation-panel">
+      <div class="comp-label">⚙ Computation at this position</div>
+      <div class="comp-equation" id="comp-eq">
+        Press <strong style="color:var(--purple);">Next Step</strong> to begin. At each position, the 9 kernel values multiply element-wise with the input patch beneath them, then everything sums to one output value.
+      </div>
+    </div>
+    <div class="demo-footer">
+      <div class="step-info">
+        <div class="step-count">Step <span id="step-cur">0</span> / <span id="step-tot">0</span></div>
+        <div class="step-hint" id="step-hint">Ready — click Next Step to start</div>
+        <div class="step-progress"><div class="step-bar" id="step-bar" style="width:0%"></div></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn-main btn-reset" id="btn-reset">↺ Reset</button>
+        <button class="btn-main btn-next" id="btn-next">Next Step →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4 -->
+<div class="section reveal" id="sec-4">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Stride &amp; Padding</h2>
+  </div>
+  <div class="card">
+    <p><span class="hl">Stride</span> controls how many pixels the kernel jumps at each step. Stride 1 = one pixel at a time (dense coverage). Stride 2 = skip every other position, roughly halving the output size. Larger stride means smaller feature maps and lower computation, but coarser detail.</p>
+    <p><span class="hl-green">Padding</span> adds a border of zeros around the input before convolving. Without it the output shrinks each layer. With <em>same</em> padding the output stays the same spatial size as the input — essential when stacking many conv layers.</p>
+  </div>
+  <div class="sp-demo">
+    <div class="sp-card">
+      <div class="sp-card-title" style="color:var(--purple);">Stride = 1</div>
+      <p>Kernel moves one pixel at a time. Dense coverage, maximum output resolution.</p>
+      <div id="stride1-grid"></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-card-title" style="color:var(--coral);">Stride = 2</div>
+      <p>Kernel jumps two pixels (red = skipped positions). Output is roughly half the size.</p>
+      <div id="stride2-grid"></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-card-title" style="color:var(--coral);">No Padding (Valid)</div>
+      <p>6×6 input with a 3×3 kernel → only the inner 4×4 positions are valid (purple).</p>
+      <div id="nopad-grid"></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-card-title" style="color:var(--green);">Same Padding</div>
+      <p>Zero-border (dim) added around the input so the output keeps its 6×6 size.</p>
+      <div id="pad-grid"></div>
+    </div>
+  </div>
+  <div class="formula-box">
+    <div class="comp-label">📐 Output Size Formula</div>
+    <div class="formula-row">
+      <span class="f-label">No padding</span>
+      <span class="f-val">⌊(N − F) / S⌋ + 1</span>
+    </div>
+    <div class="formula-row">
+      <span class="f-label">With padding P</span>
+      <span class="f-val">⌊(N + 2P − F) / S⌋ + 1</span>
+    </div>
+    <div class="formula-row" style="margin-top:4px;">
+      <span class="f-label" style="color:#78716c;font-size:0.65rem;width:auto;">N = input &nbsp;·&nbsp; F = filter &nbsp;·&nbsp; S = stride &nbsp;·&nbsp; P = padding</span>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5 -->
+<div class="section reveal" id="sec-5">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>Feature Maps &amp; Parameter Sharing</h2>
+  </div>
+  <div class="card">
+    <p>Each kernel produces one <span class="hl">feature map</span>. In practice a conv layer runs many kernels in parallel — 64, 128, or 256 — each learning a different pattern (edges, textures, curves). All maps stack depth-wise to form the layer's output volume.</p>
+    <p>The efficiency win of <span class="hl-blue">parameter sharing</span>: the same 3×3 kernel (9 weights) is reused at every spatial position. A fully-connected layer on a 224×224 image needs 150,000+ weights per output neuron. A conv layer with 64 kernels needs just 64 × 9 = <strong>576 weights total</strong>.</p>
+  </div>
+  <div class="two-col">
+    <div class="mini-card">
+      <div class="mini-card-title">TRANSLATION EQUIVARIANCE</div>
+      <p>The same kernel scans everywhere, so if a pattern shifts position in the input, its activation shifts by the same amount in the output. The network detects features regardless of where they appear.</p>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-title">RECEPTIVE FIELD</div>
+      <p>Each output neuron "sees" only a local patch. Stacking layers grows the receptive field fast — two 3×3 layers = 5×5 view, three = 7×7 — without large, expensive kernels.</p>
+    </div>
+  </div>
+  <div class="analogy" style="margin-top:16px;">
+    <div class="analogy-label">🧮 Parameter comparison</div>
+    <p>Fully-connected on 28×28 MNIST with 128 neurons: <strong>100,352 weights</strong><br>
+    Conv layer, 32 × 3×3 kernels on same input: <strong>288 weights</strong> — 348× fewer.</p>
+  </div>
+</div>
+
+<!-- PAGE FOOTER -->
+<div class="page-footer reveal">
+  <div class="coverage-box">
+    <div class="coverage-label">TOPICS COVERED</div>
+    <div class="coverage-tags">
+      <span class="ctag">Kernels</span>
+      <span class="ctag">Weighted Sum</span>
+      <span class="ctag">Output Size</span>
+      <span class="ctag">Stride</span>
+      <span class="ctag">Padding</span>
+      <span class="ctag">Parameter Sharing</span>
+    </div>
+  </div>
+  <a href="/pooling" class="footer-next">
+    <div class="fn-icon">⬇</div>
+    <div>
+      <div class="fn-label">NEXT UP</div>
+      <div class="fn-title">Pooling →</div>
+    </div>
+  </a>
+</div>
+
+</div><!-- /main-col -->
+
+<!-- ═══ STICKY SIDEBAR ═══ -->
+<div class="sidebar-col">
+
+  <!-- Module Progress -->
+  <div class="sb-card">
+    <div class="sb-label">Module Progress</div>
+    <div class="mod-list">
+      <div class="mod-item">
+        <div class="mod-check active">⊕</div>
+        <span class="mod-name active">Convolution</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Pooling</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Activation Functions</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Training CNNs</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Architectures</span>
+      </div>
+      <div class="mod-item">
+        <div class="mod-check locked"></div>
+        <span class="mod-name">Code Lab</span>
+      </div>
+    </div>
+    <div class="sb-progress-row">
+      <div class="sb-progress-label">1 of 6 modules</div>
+      <div class="sb-progress-track">
+        <div class="sb-progress-fill" id="sb-fill" style="width:16.6%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Terms -->
+  <div class="sb-card">
+    <div class="sb-label">Key Terms</div>
+    <div class="term-list">
+      <div class="term-item">
+        <div class="term-name">Kernel / Filter</div>
+        <div class="term-desc">A small learnable weight matrix slid across the input</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Feature Map</div>
+        <div class="term-desc">Output produced by applying one kernel to the input</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Stride</div>
+        <div class="term-desc">How many pixels the kernel moves at each step</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Padding</div>
+        <div class="term-desc">Zero-border added to preserve spatial dimensions</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Parameter Sharing</div>
+        <div class="term-desc">Same kernel weights reused at every spatial position</div>
+      </div>
+      <div class="term-item">
+        <div class="term-name">Receptive Field</div>
+        <div class="term-desc">Input region that influences a single output neuron</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prev / Next nav -->
+  <div class="sb-nav">
+    <a href="/" class="sb-nav-prev">← Home</a>
+    <a href="/pooling" class="sb-nav-next">Pooling →</a>
+  </div>
+
+</div><!-- /sidebar-col -->
+</div><!-- /page-layout -->
+
+<script>
+const INPUT=[
+  [10,20,30,40,50,60],[15,25,35,45,55,65],[20,30,40,50,60,70],
+  [10,15,20,25,30,35],[5,10,15,20,25,30],[1,3,5,7,9,11],
+];
+const KERNELS={
+  edge:[[-1,-1,-1],[-1,8,-1],[-1,-1,-1]],
+  blur:[[1,1,1],[1,1,1],[1,1,1]],
+  sharpen:[[0,-1,0],[-1,5,-1],[0,-1,0]],
+  identity:[[0,0,0],[0,1,0],[0,0,0]],
+};
+const KLABELS={edge:'Edge Detect',blur:'Blur (÷9)',sharpen:'Sharpen',identity:'Identity'};
+
+let kernelKey='edge',stride=1,padding=0;
+let steps=[],stepIdx=-1,inputArr=[],outputArr=[],outRows=0,outCols=0;
+
+function buildPaddedInput(){
+  if(!padding) return INPUT.map(r=>[...r]);
+  const p=padding,rows=INPUT.length+2*p,cols=INPUT[0].length+2*p;
+  const out=Array.from({length:rows},()=>Array(cols).fill(0));
+  INPUT.forEach((row,r)=>row.forEach((v,c)=>out[r+p][c+p]=v));
+  return out;
+}
+
+function computeSteps(){
+  inputArr=buildPaddedInput();
+  const inR=inputArr.length,inC=inputArr[0].length,K=3;
+  outRows=Math.floor((inR-K)/stride)+1;
+  outCols=Math.floor((inC-K)/stride)+1;
+  outputArr=Array.from({length:outRows},()=>Array(outCols).fill(null));
+  steps=[];
+  for(let or=0;or<outRows;or++)for(let oc=0;oc<outCols;oc++){
+    const ir=or*stride,ic=oc*stride,kern=KERNELS[kernelKey];
+    let sum=0;const pairs=[];
+    for(let km=0;km<3;km++)for(let kn=0;kn<3;kn++){
+      const v=inputArr[ir+km][ic+kn],k=kern[km][kn];
+      sum+=v*k;pairs.push({v,k,r:ir+km,c:ic+kn});
+    }
+    if(kernelKey==='blur')sum=Math.round(sum/9);
+    steps.push({or,oc,ir,ic,pairs,result:Math.round(sum)});
+  }
+}
+
+function renderInputGrid(active,done){
+  const el=document.getElementById('input-grid'),cols=inputArr[0].length;
+  el.style.gridTemplateColumns=`repeat(${cols},54px)`;el.innerHTML='';
+  for(let r=0;r<inputArr.length;r++)for(let c=0;c<cols;c++){
+    const d=document.createElement('div');
+    const isPad=padding>0&&(r===0||r===inputArr.length-1||c===0||c===cols-1);
+    let cls='cell ';
+    if(active?.some(p=>p.r===r&&p.c===c))cls+='active';
+    else if(done?.has(`${r},${c}`))cls+='done-cell';
+    else if(isPad)cls+='pad';
+    else cls+='normal';
+    d.className=cls;d.textContent=isPad?'0':inputArr[r][c];el.appendChild(d);
+  }
+}
+
+function renderKernelDisplay(){
+  const el=document.getElementById('kernel-display'),kern=KERNELS[kernelKey];
+  el.innerHTML='';
+  const g=document.createElement('div');g.className='kernel-grid';
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++){
+    const cell=document.createElement('div');cell.className='kernel-cell';
+    const v=kern[r][c];cell.textContent=kernelKey==='blur'?'1/9':v;
+    if(kernelKey==='blur'){cell.style.background='#e0f2fe';cell.style.color='#0284c7';cell.style.borderColor='#7dd3fc';}
+    else if(v>0){cell.style.background='#d1fae5';cell.style.color='#059669';cell.style.borderColor='#6ee7b7';}
+    else if(v<0){cell.style.background='#ffe4e6';cell.style.color='#e11d48';cell.style.borderColor='#fca5a5';}
+    g.appendChild(cell);
+  }
+  el.appendChild(g);
+  document.getElementById('kernel-label').textContent=`Kernel — ${KLABELS[kernelKey]}`;
+}
+
+function renderOutputGrid(cur){
+  const el=document.getElementById('output-grid');
+  el.style.gridTemplateColumns=`repeat(${outCols},54px)`;el.innerHTML='';
+  for(let r=0;r<outRows;r++)for(let c=0;c<outCols;c++){
+    const d=document.createElement('div');d.className='out-cell';
+    const si=r*outCols+c;
+    if(cur!==null&&si===cur){d.classList.add('current');if(outputArr[r][c]!==null)d.textContent=outputArr[r][c];}
+    else if(outputArr[r][c]!==null){d.classList.add('filled');d.textContent=outputArr[r][c];}
+    el.appendChild(d);
+  }
+  const sz=`${outRows}×${outCols}`;
+  document.getElementById('output-size-label').textContent=`Output: ${sz}`;
+  document.getElementById('output-label').textContent=`Output Feature Map (${sz})`;
+}
+
+function renderComp(step){
+  const eq=document.getElementById('comp-eq');
+  const parts=step.pairs.map(({v,k})=>{
+    const ks=kernelKey==='blur'?'1/9':k;
+    return `<span class="val-v">${v}</span><span style="color:var(--text-3)">×</span><span class="val-k">${ks}</span>`;
+  }).join('<span style="color:var(--text-3)"> + </span>');
+  const res=kernelKey==='blur'
+    ?`(${step.pairs.map(p=>p.v).join('+')})/9 = <span class="val-r">${step.result}</span>`
+    :`= <span class="val-r">${step.result}</span>`;
+  eq.innerHTML=`<div style="margin-bottom:10px;font-size:0.75rem;"><span style="color:var(--text-3);">Kernel at →</span> <span style="color:var(--purple);font-weight:600;">output[${step.or}][${step.oc}]</span> <span style="color:var(--text-3);margin-left:8px;">input patch starts at [${step.ir},${step.ic}]</span></div><div style="line-height:2.1;">${parts}</div><div style="margin-top:8px;">${res}</div>`;
+}
+
+function collectDone(){
+  const s=new Set();
+  for(let i=0;i<stepIdx;i++)steps[i]?.pairs.forEach(p=>s.add(`${p.r},${p.c}`));
+  return s;
+}
+
+function advance(){
+  if(stepIdx>=steps.length-1)return;
+  stepIdx++;
+  const step=steps[stepIdx];
+  outputArr[step.or][step.oc]=step.result;
+  renderInputGrid(step.pairs,collectDone());
+  renderOutputGrid(stepIdx);
+  renderComp(step);
+  const pct=(stepIdx+1)/steps.length*100;
+  document.getElementById('step-bar').style.width=pct+'%';
+  document.getElementById('step-cur').textContent=stepIdx+1;
+  const hint=document.getElementById('step-hint');
+  if(stepIdx===steps.length-1){hint.textContent='✓ Complete — all positions computed!';document.getElementById('btn-next').disabled=true;}
+  else hint.textContent=`Kernel at [${step.ir},${step.ic}] → output[${step.or}][${step.oc}]`;
+  updateNavDots();
+}
+
+function reset(){
+  computeSteps();stepIdx=-1;
+  outputArr=Array.from({length:outRows},()=>Array(outCols).fill(null));
+  renderInputGrid(null,new Set());renderKernelDisplay();renderOutputGrid(null);
+  document.getElementById('comp-eq').innerHTML=`Press <strong style="color:var(--purple);">Next Step</strong> to begin. At each position, the 9 kernel values multiply element-wise with the input patch beneath them, then everything sums to one output value.`;
+  document.getElementById('step-cur').textContent='0';
+  document.getElementById('step-tot').textContent=steps.length;
+  document.getElementById('step-bar').style.width='0%';
+  document.getElementById('step-hint').textContent=`${steps.length} total steps · stride ${stride} · padding ${padding}`;
+  document.getElementById('btn-next').disabled=false;
+}
+
+document.getElementById('kernel-select').addEventListener('change',e=>{kernelKey=e.target.value;reset();});
+document.getElementById('stride-select').addEventListener('change',e=>{stride=parseInt(e.target.value);reset();});
+document.getElementById('padding-select').addEventListener('change',e=>{padding=parseInt(e.target.value);reset();});
+document.getElementById('btn-next').addEventListener('click',advance);
+document.getElementById('btn-reset').addEventListener('click',reset);
+
+function makeSpGrid(id,rows,cols,fn){
+  const g=document.createElement('div');g.className='sp-grid';
+  g.style.gridTemplateColumns=`repeat(${cols},28px)`;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const d=document.createElement('div');d.className='sp-cell '+fn(r,c);g.appendChild(d);}
+  document.getElementById(id).appendChild(g);
+}
+makeSpGrid('stride1-grid',4,6,(r,c)=>r===0&&c<=3?'sp-active':'sp-normal');
+makeSpGrid('stride2-grid',4,6,(r,c)=>{if(r===0){if(c===0||c===2)return'sp-active';if(c===1||c===3)return'sp-skip';}return'sp-normal';});
+makeSpGrid('nopad-grid',6,6,(r,c)=>r<4&&c<4?'sp-active':'sp-normal');
+makeSpGrid('pad-grid',8,8,(r,c)=>r===0||r===7||c===0||c===7?'sp-pad':'sp-normal');
+
+const SECS=['sec-1','sec-2','sec-3','sec-4','sec-5'];
+function getCurrentSection(){let cur=0;SECS.forEach((id,i)=>{const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<window.innerHeight*0.55)cur=i;});return cur;}
+function updateNavDots(){const cur=getCurrentSection();document.querySelectorAll('.dot').forEach((d,i)=>{d.classList.toggle('active',i===cur);d.classList.toggle('done',i<cur);});}
+
+// Update sidebar section progress as user scrolls
+function updateSidebarProgress(){
+  const cur=getCurrentSection();
+  // map page sections (0-4) to sidebar module item (index 0 = Convolution)
+  // sections within convolution page: mark module as "in progress" always (active)
+  // fill bar based on how far through the 5 sections the user is
+  const pct=Math.round(((cur+1)/SECS.length)*100);
+  const fill=document.getElementById('sb-fill');
+  if(fill) fill.style.width=Math.max(16.6, pct)+'%';
+}
+
+document.querySelectorAll('.dot').forEach((d,i)=>d.addEventListener('click',()=>document.getElementById(SECS[i])?.scrollIntoView({behavior:'smooth'})));
+window.addEventListener('scroll',()=>{ updateNavDots(); updateSidebarProgress(); },{passive:true});
+
+const obs=new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible');}),{threshold:0.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+reset();
+</script>
+</body>
+</html>
