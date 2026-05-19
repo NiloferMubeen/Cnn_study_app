@@ -188,6 +188,10 @@ PAGE_CONTEXT = {
 
 
 # ── Page routes ───────────────────────────────────────────────────────────────
+@app.route("/ping")
+def ping():
+    return "ok", 200
+    
 @app.route("/")
 def index():
     return render_template("index.html", topics=TOPICS)
